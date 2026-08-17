@@ -1,0 +1,119 @@
+{
+  "_readme": "출처 티어 테이블. 이 파일만 고치면 채점 기준이 바뀝니다. 매칭은 등록 도메인 기준이며, 더 긴(구체적인) 패턴이 우선합니다. 'host/path-prefix' 형태로 경로까지 지정 가능.",
+  "_tiers": {
+    "1": "1차 자료 / 최상위 피어리뷰 / 공식 통계·표준 (base 88)",
+    "2": "정평 있는 저널·학회, 주요 기관 공식 발표 (base 74)",
+    "3": "프리프린트, 주요 연구실·기업 공식 블로그/기술문서 (base 60)",
+    "4": "양질의 전문 매체, 이름 있는 개인 기술 블로그 (base 46)",
+    "5": "일반 매체, 커뮤니티, 집계 사이트 (base 32)",
+    "6": "SEO 콘텐츠 팜, 출처 없는 리스티클, AI 양산 글 (base 14)",
+    "block": "인용 금지 (스크래퍼·미러·표절 사이트) (base 0)"
+  },
+
+  "tier1": [
+    "nature.com", "science.org", "cell.com", "pnas.org", "nejm.org",
+    "thelancet.com", "bmj.com", "jamanetwork.com",
+    "ieee.org", "ieeexplore.ieee.org", "dl.acm.org", "acm.org",
+    "jmlr.org", "proceedings.mlr.press", "papers.nips.cc", "neurips.cc",
+    "aclanthology.org", "usenix.org",
+    "iso.org", "ietf.org", "rfc-editor.org", "w3.org", "nist.gov",
+    "census.gov", "bls.gov", "federalreserve.gov", "imf.org", "worldbank.org",
+    "oecd.org", "who.int", "cdc.gov", "nih.gov", "pubmed.ncbi.nlm.nih.gov",
+    "eurostat.ec.europa.eu", "kostat.go.kr", "bok.or.kr", "kdi.re.kr",
+    "law.go.kr", "sec.gov", "eur-lex.europa.eu", "uspto.gov", "epo.org",
+    "clinicaltrials.gov", "cochranelibrary.com"
+  ],
+
+  "tier2": [
+    "springer.com", "link.springer.com", "sciencedirect.com", "wiley.com",
+    "onlinelibrary.wiley.com", "tandfonline.com", "sagepub.com",
+    "journals.plos.org", "elifesciences.org", "frontiersin.org",
+    "mdpi.com", "openreview.net",
+    "nber.org", "brookings.edu", "rand.org", "pewresearch.org",
+    "gartner.com", "forrester.com", "idc.com", "mckinsey.com",
+    "bcg.com", "bain.com", "deloitte.com", "pwc.com",
+    "statista.com", "ourworldindata.org",
+    "cmu.edu", "mit.edu", "stanford.edu", "berkeley.edu", "ox.ac.uk",
+    "cam.ac.uk", "ethz.ch", "kaist.ac.kr", "snu.ac.kr",
+    "nasa.gov", "esa.int", "energy.gov", "europa.eu", "go.kr", "korea.kr",
+    "semanticscholar.org", "doi.org", "crossref.org"
+  ],
+
+  "tier3": [
+    "arxiv.org", "biorxiv.org", "medrxiv.org", "ssrn.com", "osf.io",
+    "papers.ssrn.com", "researchsquare.com", "chemrxiv.org",
+    "anthropic.com", "openai.com", "deepmind.google", "ai.googleblog.com",
+    "research.google", "blog.google", "ai.meta.com", "research.facebook.com",
+    "microsoft.com/en-us/research", "nvidia.com", "developer.nvidia.com",
+    "huggingface.co", "pytorch.org", "tensorflow.org", "jax.readthedocs.io",
+    "docs.python.org", "developer.mozilla.org", "kernel.org",
+    "aws.amazon.com/blogs", "cloud.google.com", "azure.microsoft.com",
+    "docs.claude.com", "platform.openai.com", "docs.anthropic.com",
+    "github.blog", "stripe.com/blog", "netflixtechblog.com",
+    "engineering.fb.com", "eng.uber.com", "slack.engineering",
+    "cloudflare.com", "blog.cloudflare.com", "mozilla.org",
+    "distill.pub", "lilianweng.github.io", "karpathy.github.io",
+    "colah.github.io", "sebastianraschka.com", "epoch.ai", "epochai.org",
+    "lmsys.org", "eleuther.ai", "allenai.org", "bair.berkeley.edu",
+    "thegradient.pub", "jalammar.github.io"
+  ],
+
+  "tier4": [
+    "arstechnica.com", "theverge.com", "wired.com", "technologyreview.com",
+    "spectrum.ieee.org", "quantamagazine.org", "nature.com/news",
+    "ft.com", "economist.com", "wsj.com", "bloomberg.com", "reuters.com",
+    "apnews.com", "nytimes.com", "washingtonpost.com", "theguardian.com",
+    "semianalysis.com", "stratechery.com", "importai.substack.com",
+    "simonwillison.net", "martinfowler.com", "danluu.com",
+    "acoup.blog", "astralcodexten.com", "lesswrong.com",
+    "infoq.com", "thenewstack.io", "theregister.com",
+    "news.ycombinator.com", "github.com"
+  ],
+
+  "tier5": [
+    "medium.com", "towardsdatascience.com", "dev.to", "hashnode.com",
+    "substack.com", "wordpress.com", "blogspot.com", "tistory.com",
+    "velog.io", "brunch.co.kr", "naver.com", "blog.naver.com",
+    "reddit.com", "stackoverflow.com", "stackexchange.com",
+    "quora.com", "x.com", "twitter.com", "linkedin.com",
+    "youtube.com", "wikipedia.org", "cnn.com", "bbc.com", "forbes.com",
+    "businessinsider.com", "techcrunch.com", "venturebeat.com",
+    "zdnet.com", "cnet.com", "engadget.com", "mashable.com",
+    "hankyung.com", "mk.co.kr", "chosun.com", "joongang.co.kr",
+    "etnews.com", "zdnet.co.kr", "bloter.net"
+  ],
+
+  "tier6": [
+    "geeksforgeeks.org", "w3schools.com", "tutorialspoint.com",
+    "javatpoint.com", "simplilearn.com", "guru99.com", "edureka.co",
+    "analyticsvidhya.com", "kdnuggets.com", "datacamp.com/blog",
+    "hackr.io", "codecademy.com/resources", "turing.com/blog",
+    "aimultiple.com", "marketsandmarkets.com", "grandviewresearch.com",
+    "alliedmarketresearch.com", "mordorintelligence.com",
+    "precedenceresearch.com", "fortunebusinessinsights.com",
+    "expertbeacon.com", "byjus.com", "unstop.com", "naukri.com",
+    "linkedin.com/pulse", "quora.com/profile"
+  ],
+
+  "block": [
+    "sci-hub.se", "libgen.is", "researchgate.net/publication/preview",
+    "paperswithcode.com/paper/mirror", "semantic-scholar-mirror.com",
+    "arxiv-sanity-lite.com/mirror", "chatgptdetector.co",
+    "coursehero.com", "scribd.com", "studocu.com", "slideshare.net",
+    "issuu.com", "academia.edu"
+  ],
+
+  "preprint_hosts": ["arxiv.org", "biorxiv.org", "medrxiv.org", "chemrxiv.org", "ssrn.com", "researchsquare.com", "osf.io", "hal.science"],
+
+  "seo_path_penalties": [
+    "/best-", "/top-10", "/top-5", "/top-7", "/ultimate-guide",
+    "/everything-you-need-to-know", "-in-2023", "-in-2024",
+    "/what-is-", "/complete-guide-to", "/beginners-guide"
+  ],
+
+  "notes": [
+    "mdpi/frontiers는 저널별 편차가 커서 tier2로 두되 인용수 보정에 크게 의존시킵니다.",
+    "github.com은 tier4에 두고 실제 star 수로 크게 조정합니다.",
+    "wikipedia는 tier5지만 각주로 1차 자료를 찾아가는 용도로만 쓰라고 SKILL.md가 지시합니다."
+  ]
+}
