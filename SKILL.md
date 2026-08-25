@@ -1,40 +1,25 @@
 ---
 name: scored-web-search
-description: Rank and filter web sources by credibility before reading them, using a deterministic scorer (domain tier + citation counts + engagement) instead of LLM judgment. Use for ANY research, literature review, market/competitor analysis, fact-gathering, or "조사해줘 / 자료 찾아줘 / 리서치 / 논문 찾아줘 / 시장조사" request where the answer depends on outside sources. Also use when the user complains that sources were low quality, unsourced, blog-tier, or treated as equally credible.
+description2: Filter and rank web sources by credibility before main agent reads them, using deterministic score (domain tier, citation counts, engagement, etc). LLM judgement is not included. Use for high quality research, fact-gathering requests in which sub-standard sources can compromise quality of answer. Or use it when explicitly request for this skill. If you are not sure about neccesity of this skill, ask user.
 ---
 
 # Scored Web Search
 
-조사 업무에서 **출처를 읽기 전에 걸러내는** 스킬. 신뢰도 판단을 LLM이 아니라
-결정론적 스크립트가 하기 때문에 토큰을 거의 쓰지 않는다.
+This skill filters sub-standard sources before the main agent reads them when high quality research is on demand. 
 
-핵심 원칙 하나: **점수를 매기는 데 모델을 쓰지 말 것.** 도메인 등급·인용수·
-발행일·star 수는 전부 코드와 무료 API로 알 수 있다. 모델은 통과한 소수의
-자료를 *읽는* 데만 쓴다.
-
-## 파이프라인
+## Pipeline
 
 ```
-1. 수집  (저가 모델 서브에이전트)  → URL 목록만. 요약·분석 금지
-2. 채점  (srcscore.py, 토큰 0)     → 0~100점 + 판정
-3. 정독  (메인 모델)               → PRIMARY/SUPPORT만, 상위 N개 한정
-4. 검증  (선택, 저가 모델)          → 주장↔근거 대조
-5. 작성                            → 모든 수치에 [점수] 꼬리표
+1. Web-Search  (a single lightweight subagent) → only URL lists, no summary
+2. Filter (srcscore.py) → score 0 to 100 + filter result
+3. Read  (the main agent) → PRIMARY/SUPPORT only, read top n sources
+4. Repeat from Web-Search if necessary.
+5. Score → tag sources
 ```
 
-### 1단계 — 수집: 저가 모델에게 URL만 시킨다
+### Step 1. Web-Search
 
-`Agent` 툴로 서브에이전트를 띄우되 `model` 을 저가 모델(`haiku`, `gpt-5.6-luna`)로
-지정한다. 서브에이전트에게 주는 지시는 **반드시 아래 제약을 포함**한다.
-
-> 검색어 N개를 돌려서 나온 URL을 수집하라. 페이지를 열지 마라. 요약하지 마라.
-> 평가하지 마라. 출력은 `URL | 제목` 형식 한 줄씩, 그 외 아무 말도 하지 마라.
-> 40~80개를 목표로 하고 중복은 제거하라.
-
-이게 이 스킬에서 가장 큰 절약 지점이다. 검색 결과 페이지를 메인 컨텍스트로
-가져오지 않고, 서브에이전트 안에서 태워버린 뒤 URL 목록만 받는다.
-
-여러 하위 주제가 있으면 서브에이전트를 주제별로 병렬로 띄운다.
+The main agent defines search keywords for answer. A lightweight subagent (Do not use `fork`) is assigned for web search and collecting `URL | title` list. If main agent needs search on multiple sub topics, a lightweight subagent is assigned for two sub topics max. Use more parallel subagents for more than 3 sub topics. Collect total 40-60.
 
 ### 2단계 — 채점: 스크립트에 넘긴다
 
@@ -42,8 +27,8 @@ description: Rank and filter web sources by credibility before reading them, usi
 python3 scripts/srcscore.py --in urls.txt --field ai
 ```
 
-`--field` 는 인용 반감기를 정한다: `ai`(3년), `cs`(4년), `bio`/`med`(6년),
-`policy`(5년), `general`(6년). AI/ML 조사에서 2019년 논문은 낡은 것이지만
+`--field` 는 인용 반감기를 정한다: `ai`(2년), `cs`(6년), `bio`/`med`(6년),
+`policy`(2년), `general`(6년). AI/ML 조사에서 2019년 논문은 낡은 것이지만
 의학에서는 아니다.
 
 출력은 한 줄당 15토큰 남짓의 압축 표다:
@@ -68,7 +53,7 @@ SCORE VERDICT T  SIGNALS                     URL
 | DROP | <30 | 열지 않음 |
 | BLOCKED | 0 | 철회 논문/스크래퍼. 절대 사용 금지 |
 
-### 3단계 — 정독: 통과한 것만 연다
+### 3단계 — 정독: 통과한 것만 연다 - 이거 좋네 ㅋㅋ
 
 ```bash
 python3 scripts/srcscore.py --in urls.txt --min 62 --top 10 --format urls
@@ -82,7 +67,12 @@ python3 scripts/srcscore.py --in urls.txt --min 62 --top 10 --format urls
 PRIMARY가 3개 미만이면 자료가 부족한 것이다. 검색어를 바꿔 1단계를 한 번 더
 돌린다. WEAK를 끌어올려 쓰지 않는다.
 
-### 4단계 — 검증(선택): 주장↔근거 대조
+### 4단계 - 재검색
+
+3단계의 결과로 다시 검색이 필요한 경우 1부터 반복한다.
+
+
+### 5단계 — 검증(선택): 주장↔근거 대조
 
 사용자가 정확성을 특히 강조했거나, 보고서에 수치가 많이 들어갈 때만 한다.
 저가 모델 서브에이전트에게 통과한 자료를 주고 **오직 이것만** 시킨다:
@@ -93,7 +83,7 @@ PRIMARY가 3개 미만이면 자료가 부족한 것이다. 검색어를 바꿔 
 
 재인용(secondary)으로 판명되면 원출처 URL을 찾아 2단계로 되돌린다.
 
-### 5단계 — 작성
+### 6단계 — 작성
 
 모든 수치·주장 옆에 출처와 점수를 남긴다: `... 32% 증가했다 (Nature 2025,
 PRIMARY 91)`. 점수가 SKIM 이하인 근거로 쓴 문장은 "확정되지 않았다",
