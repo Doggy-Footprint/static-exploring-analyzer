@@ -1,1 +1,3 @@
-- Separate files according to features
+# Scored Web Search
+
+Filtering system based on deterministic indicators. Look `SKILL.md` for details.
