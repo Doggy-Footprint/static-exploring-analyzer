@@ -1,6 +1,6 @@
 ---
 name: scored-web-search
-description2: Filter and rank web sources by credibility before main agent reads them, using deterministic score (domain tier, citation counts, engagement, etc). LLM judgement is not included. Use for high quality research, fact-gathering requests in which sub-standard sources can compromise quality of answer. Or use it when explicitly request for this skill. If you are not sure about neccesity of this skill, ask user.
+description2: Filter and rank web sources by credibility before main agent reads them, using deterministic score (domain tier, citation counts, engagement, etc). LLM judgement is not included. Use for high quality research, fact-gathering requests in which sub-standard sources can compromise quality of answer. Or use it when explicitly request for this skill. If you are not sure about necesity of this skill, ask user.
 ---
 
 # Scored Web Search
@@ -26,11 +26,7 @@ Max 2 sub-topics per subagent. For 3 or more sub-topics, run subagents in parall
 
 ### Step 2 — Score: hand it to the script
 
-```bash
-python3 scripts/srcscore.py --in urls.txt --field ai
-```
-
-`--field` sets the citation half-life: `ai` (2y), `policy` (2y), `cs` (6y), `bio`/`med` (6y), `general` (6y). A 2019 paper is stale in AI/ML research but not in medicine.
+Write all subagent returns to `urls.txt`(one URL per line) in temporal directory and run `sciprts/srcscore.py`. You can check arguments with `--help`.
 
 Output is a compact table, roughly 15 tokens per line:
 
@@ -53,11 +49,6 @@ SCORE VERDICT T  SIGNALS                     URL
 | BLOCKED | 0 | Retracted paper / scraper. Never use |
 
 ### Step 3 — Read: open only what passed
-
-```bash
-python3 scripts/srcscore.py --in urls.txt --min 62 --top 10 --format urls
-```
-
 `WebFetch` only the URLs this returns. **Do not open WEAK/DROP.** The moment you open one to judge it for yourself, the savings are gone — that is the exact problem this skill exists to solve.
 
 Default cap: 8-12 sources. Up to 20 if the user asks for depth.
@@ -70,7 +61,7 @@ Two re-search rounds max. Beyond that, **ask the user explicitly** before search
 
 ### Step 5 — Verify (optional): claims vs. evidence
 
-Only when the user has stressed accuracy, or the report carries a lot of figures. Give the sources that passed to a **lightweight subagent** and have it do **this and nothing else**:
+Only when the user has stressed accuracy, or the report carries a lot of figures. Give the sources url that passed scoring filter to a **lightweight subagent** and have it do **this and nothing else**:
 
 > For each figure or claim: (a) does this document actually state that figure, (b) is this document the original source of the figure or is it citing someone else, (c) are sample size, time period, and measurement method stated. Answer only in the format `claim | supported/secondary/contradicted | location of evidence`.
 
@@ -82,29 +73,7 @@ Tag every figure and claim with its source and score: `... rose 32% (Nature 2025
 
 Close the report with one line: `62 sources collected → 11 passed → 9 read (avg 78)`.
 
-## 자주 쓰는 명령
-
-```bash
-# 전체 표
-python3 scripts/srcscore.py --in urls.txt
-
-# 통과한 URL만 (다음 단계 입력)
-python3 scripts/srcscore.py --in urls.txt --min 62 --format urls
-
-# 보고서 부록용 마크다운 표
-python3 scripts/srcscore.py --in urls.txt --format md
-
-# 네트워크 없이 도메인 등급만 (즉시, 완전 무료)
-python3 scripts/srcscore.py --in urls.txt --no-net
-
-# URL 몇 개만 빠르게
-python3 scripts/srcscore.py -u https://arxiv.org/abs/1706.03762 -u https://w3schools.com/x
-```
-
-조회 결과는 `~/.cache/srcscore/` 에 14일간 캐시된다. 같은 주제를 다시 조사하면
-2단계는 사실상 즉시 끝난다.
-
-## 점수는 어떻게 나오는가
+## Scoring Policy
 
 1차(도메인 등급)로 기본 점수를 잡고, 2차(증거 지표)로 가감한다.
 
@@ -124,19 +93,7 @@ python3 scripts/srcscore.py -u https://arxiv.org/abs/1706.03762 -u https://w3sch
 
 전체 수식은 `references/scoring.md` 참고.
 
-## 점수표 손보기
-
-`scripts/domains.json` 만 고치면 된다. 재시작 불필요.
-
-- 특정 도메인을 신뢰하게: 해당 티어 배열에 도메인 추가
-- 특정 사이트 영구 배제: `block` 배열에 추가
-- 경로 단위 지정 가능: `"medium.com/towards-data-science"` 처럼 `호스트/경로`
-  형태로 넣으면 더 구체적인 패턴이 우선한다
-
-사용자가 "이 사이트는 믿을 만해 / 이건 쓰지 마"라고 하면 그 자리에서 이 파일을
-고치고, 무엇을 어느 티어에 넣었는지 한 줄로 알려준다.
-
-## 하지 말 것
+## Don't Do This
 
 - 모델에게 "이 출처들 신뢰도 평가해줘"라고 시키지 말 것. 스크립트가 한다.
 - 점수를 확인하려고 페이지를 열지 말 것.
