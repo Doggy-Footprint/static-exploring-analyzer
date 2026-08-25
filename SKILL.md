@@ -10,28 +10,29 @@ This skill filters sub-standard sources before the main agent reads them when hi
 ## Pipeline
 
 ```
-1. Web-Search  (a single lightweight subagent) → only URL lists, no summary
-2. Filter (srcscore.py) → score 0 to 100 + filter result
-3. Read  (the main agent) → PRIMARY/SUPPORT only, read top n sources
-4. Repeat from Web-Search if necessary.
-5. Score → tag sources
+1. Search   (lightweight subagent) → URL list only, no summaries
+2. Score    (srcscore.py)          → 0-100 + verdict
+3. Read     (main agent)           → top n PRIMARY/SUPPORT only
+4. Re-search (loop back to 1 if sources are thin)
+5. Verify   (optional)             → claims vs. evidence
+6. Write    → every claim tagged with source + score
 ```
 
-### Step 1. Web-Search
+### Step 1 — Search: collect URLs only
 
-The main agent defines search keywords for answer. A lightweight subagent (Do not use `fork`) is assigned for web search and collecting `URL | title` list. If main agent needs search on multiple sub topics, a lightweight subagent is assigned for two sub topics max. Use more parallel subagents for more than 3 sub topics. Collect total 40-60.
+The main agent defines the search keywords. Delegate the actual web search to a **lightweight subagent** (do NOT use `fork`) and accept only a `URL | title` list in return. No summaries, no snippets — the point of this step is to keep low-quality text out of the main context.
 
-### 2단계 — 채점: 스크립트에 넘긴다
+Max 2 sub-topics per subagent. For 3 or more sub-topics, run subagents in parallel. Collect 40-60 URLs total.
+
+### Step 2 — Score: hand it to the script
 
 ```bash
 python3 scripts/srcscore.py --in urls.txt --field ai
 ```
 
-`--field` 는 인용 반감기를 정한다: `ai`(2년), `cs`(6년), `bio`/`med`(6년),
-`policy`(2년), `general`(6년). AI/ML 조사에서 2019년 논문은 낡은 것이지만
-의학에서는 아니다.
+`--field` sets the citation half-life: `ai` (2y), `policy` (2y), `cs` (6y), `bio`/`med` (6y), `general` (6y). A 2019 paper is stale in AI/ML research but not in medicine.
 
-출력은 한 줄당 15토큰 남짓의 압축 표다:
+Output is a compact table, roughly 15 tokens per line:
 
 ```
 SCORE VERDICT T  SIGNALS                     URL
@@ -42,54 +43,44 @@ SCORE VERDICT T  SIGNALS                     URL
   0.0 BLOCKED  0  RETRACTED                   https://...
 ```
 
-판정 밴드:
-
-| 판정 | 점수 | 이 자료로 무엇을 하는가 |
+| Verdict | Score | What to do with it |
 |---|---|---|
-| PRIMARY | 78+ | 근거로 직접 인용. 수치·주장의 출처로 삼아도 됨 |
-| SUPPORT | 62~77 | 보조 근거. 단독으로 결론을 세우지 않음 |
-| SKIM | 46~61 | 교차확인용. 다른 자료가 같은 말을 할 때만 인용 |
-| WEAK | 30~45 | 배경 파악용. **인용 금지** |
-| DROP | <30 | 열지 않음 |
-| BLOCKED | 0 | 철회 논문/스크래퍼. 절대 사용 금지 |
+| PRIMARY | 78+ | Cite directly. Valid source for figures and claims |
+| SUPPORT | 62-77 | Supporting evidence. Never the sole basis for a conclusion |
+| SKIM | 46-61 | Cross-checking only. Cite only when another source says the same |
+| WEAK | 30-45 | Background reading. **Do not cite** |
+| DROP | <30 | Do not open |
+| BLOCKED | 0 | Retracted paper / scraper. Never use |
 
-### 3단계 — 정독: 통과한 것만 연다 - 이거 좋네 ㅋㅋ
+### Step 3 — Read: open only what passed
 
 ```bash
 python3 scripts/srcscore.py --in urls.txt --min 62 --top 10 --format urls
 ```
 
-여기서 나온 URL만 `WebFetch` 한다. **WEAK/DROP은 열지 않는다.** 열어보고
-판단하는 순간 절약이 사라진다 — 그게 지금 문제 그 자체다.
+`WebFetch` only the URLs this returns. **Do not open WEAK/DROP.** The moment you open one to judge it for yourself, the savings are gone — that is the exact problem this skill exists to solve.
 
-기본 상한: 8~12개. 사용자가 "깊게"를 요구하면 20개까지.
+Default cap: 8-12 sources. Up to 20 if the user asks for depth.
 
-PRIMARY가 3개 미만이면 자료가 부족한 것이다. 검색어를 바꿔 1단계를 한 번 더
-돌린다. WEAK를 끌어올려 쓰지 않는다.
+### Step 4 — Re-search: loop back to 1 when sources are thin
 
-### 4단계 - 재검색
+Fewer than 3 PRIMARY means the evidence base is insufficient. Do not promote WEAK sources to fill the gap — change the keywords and re-run step 1. Same if reading in step 3 surfaced a new sub-topic worth searching.
 
-3단계의 결과로 다시 검색이 필요한 경우 1부터 반복한다.
+Two re-search rounds max. Beyond that, **ask the user explicitly** before searching again, and if they decline, state plainly in the answer that the evidence base is thin.
 
+### Step 5 — Verify (optional): claims vs. evidence
 
-### 5단계 — 검증(선택): 주장↔근거 대조
+Only when the user has stressed accuracy, or the report carries a lot of figures. Give the sources that passed to a **lightweight subagent** and have it do **this and nothing else**:
 
-사용자가 정확성을 특히 강조했거나, 보고서에 수치가 많이 들어갈 때만 한다.
-저가 모델 서브에이전트에게 통과한 자료를 주고 **오직 이것만** 시킨다:
+> For each figure or claim: (a) does this document actually state that figure, (b) is this document the original source of the figure or is it citing someone else, (c) are sample size, time period, and measurement method stated. Answer only in the format `claim | supported/secondary/contradicted | location of evidence`.
 
-> 각 수치·주장에 대해: (a) 이 문서가 실제로 그 수치를 말하는가, (b) 그 수치의
-> 원출처가 이 문서인가 아니면 재인용인가, (c) 표본 수·기간·측정 방법이 명시돼
-> 있는가. `주장 | 지지/재인용/불일치 | 근거 위치` 형식으로만 답하라.
+When a figure turns out to be secondary, the document you read is not its source. Take the URL of the original it cites — a new source, not yet scored — and run that through step 2; if it passes, read it and attribute the figure to it. If the original is paywalled, dead, or fails step 2, keep the figure attributed to the document you read and mark it as a re-report — never present a re-report as a primary source.
 
-재인용(secondary)으로 판명되면 원출처 URL을 찾아 2단계로 되돌린다.
+### Step 6 — Write
 
-### 6단계 — 작성
+Tag every figure and claim with its source and score: `... rose 32% (Nature 2025, PRIMARY 91)`. Any sentence resting on a SKIM-or-below source gets a hedge — "not yet confirmed", "according to a single report".
 
-모든 수치·주장 옆에 출처와 점수를 남긴다: `... 32% 증가했다 (Nature 2025,
-PRIMARY 91)`. 점수가 SKIM 이하인 근거로 쓴 문장은 "확정되지 않았다",
-"한 건의 보고에 따르면" 같은 대비 표현을 붙인다.
-
-보고서 끝에 한 줄: `자료 62건 수집 → 11건 통과 → 9건 정독 (평균 78점)`.
+Close the report with one line: `62 sources collected → 11 passed → 9 read (avg 78)`.
 
 ## 자주 쓰는 명령
 
