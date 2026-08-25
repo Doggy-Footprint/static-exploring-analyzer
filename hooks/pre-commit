@@ -1,0 +1,36 @@
+#!/bin/sh
+# scored-web-search pre-commit hook.
+#
+# Rule-based, no LLM: fails the commit when policy.json, references/scoring.md
+# and the golden fixtures disagree. Install with scripts/install-hooks.sh.
+#
+# Skip once (emergency only):  git commit --no-verify
+
+set -e
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+# Only run when something the checks care about is staged.
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+case "$staged" in
+  *scripts/policy.json*|*scripts/srcscore.py*|*scripts/check_policy.py*|\
+  *scripts/golden.json*|*references/scoring.md*) ;;
+  *) exit 0 ;;
+esac
+
+python3 scripts/check_policy.py || {
+  echo ""
+  echo "pre-commit: policy checks failed."
+  echo "  python3 scripts/check_policy.py --fix     # regenerate references/scoring.md"
+  echo "  python3 scripts/check_policy.py --bless   # re-baseline golden cases (deliberate changes only)"
+  exit 1
+}
+
+# --fix must have been run and staged: an unstaged regeneration would leave the
+# committed doc out of date even though the check passed on the worktree.
+if ! git diff --quiet -- references/scoring.md scripts/golden.json; then
+  echo "pre-commit: references/scoring.md or scripts/golden.json has unstaged changes."
+  echo "  git add references/scoring.md scripts/golden.json"
+  exit 1
+fi

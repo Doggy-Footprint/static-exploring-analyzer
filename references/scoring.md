@@ -1,143 +1,214 @@
-# 채점 수식 명세
+# Scoring policy
 
-`srcscore.py` 가 계산하는 방식 전체. 모든 값은 코드와 무료 API에서만 나오며
-LLM은 이 과정에 전혀 관여하지 않는다.
+Everything `scripts/srcscore.py` computes. All of it comes from code and free
+APIs; no LLM judgement enters the score at any point.
 
 ```
-final = clamp(0, 100, TIER_BASE + Σ adjustments)
+final = clamp(0, 100, tier_base + Σ adjustments)
 ```
 
-## 1차: 도메인 티어 (기본점)
+**Every number on this page lives in `scripts/policy.json`.** The tables and
+formulas below sit inside `<!-- policy:... -->` markers and are generated from
+that file by `scripts/check_policy.py`. Do not hand-edit them — edit
+`policy.json` and run `python3 scripts/check_policy.py --fix`. The pre-commit
+hook fails the commit if the two ever drift apart.
 
-| 티어 | 기본점 | 정의 |
+## First pass: domain tier (base score)
+
+<!-- policy:tiers -->
+| Tier | Base | Definition |
 |---|---|---|
-| 1 | 88 | 1차 자료, 최상위 피어리뷰, 공식 통계·표준 (Nature, IEEE, 통계청, RFC) |
-| 2 | 74 | 정평 있는 저널·학회, 주요 기관·대학 공식 발표 |
-| 3 | 60 | 프리프린트, 주요 연구실/기업 공식 블로그·기술문서 |
-| 4 | 46 | 양질의 전문 매체, 이름 있는 개인 기술 블로그 |
-| 5 | 32 | 일반 매체, 커뮤니티, 집계 사이트. **미등록 도메인 기본값** |
-| 6 | 14 | SEO 콘텐츠 팜, 출처 없는 리스티클, 시장조사 스팸 |
-| block | 0 | 스크래퍼·미러·표절 사이트. 즉시 BLOCKED |
+| 1 | 88 | Academic journals, official statistics, standards bodies |
+| 2 | 74 | Reputable journals, major institutions and universities |
+| 3 | 60 | Preprints, major research-lab and vendor engineering blogs |
+| 4 | 46 | Trade media, well-known individual technical blogs |
+| 5 | 32 | General media, community sites, aggregators (default for unregistered domains) |
+| 6 | 14 | SEO content farms, unsourced listicles, market-research spam |
+| block | 0 | Scrapers, mirrors, plagiarism hosts. Always BLOCKED |
 
-매칭 규칙: 등록 도메인 기준. 더 긴(구체적인) 패턴이 우선하고, `호스트/경로`
-형태는 호스트-only 패턴을 항상 이긴다. 그래서 `medium.com` 은 T5지만
-`medium.com/towards-data-science` 를 T4로 따로 올릴 수 있다.
+Unregistered domains start at tier 5.
+<!-- /policy:tiers -->
 
-## 2차: 증거 지표 (가감점)
-
-### 인용 (학술 자료만)
-
-```
-c   = 누적 인용수
-age = max(0, 지금 - 발행일)         # publication_date 우선, 없으면 연도
-cite_pts = min(20, 6.2 · log10(1 + c))
-vel      = c / max(0.75, age)
-vel_pts  = min(9,  4.2 · log10(1 + vel))
-```
-
-`max(0.75, age)` 의 하한이 중요하다. 하한이 없으면 어제 나온 인용 2회짜리
-프리프린트의 "연간 인용 속도"가 700회로 계산되어 고전 논문을 이긴다.
-
-조회 순서: OpenAlex(DOI/PMID/arXiv-DOI) → Semantic Scholar(arXiv ID) →
-없으면 지표 없음. arXiv는 `10.48550/arXiv.{id}` DOI로 OpenAlex에서 찾는다.
-
-### 시의성
-
-```
-hl   = 분야 반감기 (ai 3.0 / cs 4.0 / policy 5.0 / bio·med·general 6.0)
-age < 1년   → +4
-age < 2년   → +2
-그 외       → -12 · (1 - 0.5^((age-2)/hl))
-```
-
-고인용 보정: `c ≥ 1000` 이면 낡음 페널티 면제(고전은 낡지 않는다),
-`c ≥ 300` 이면 페널티 40%만 적용.
-
-### 동료심사 상태
-
-프리프린트 호스트(arxiv, biorxiv, medrxiv, SSRN, OSF …)에 대해서만 적용:
-
-| 조건 | 가감 | 플래그 |
-|---|---|---|
-| 학회/저널에 정식 게재됨 | +9 | `published@{venue}` |
-| 아직 프리프린트 | -8 | `preprint` |
-| 프리프린트 + 1년 미만 + 인용 5회 미만 | 추가 -4 | `unvetted` |
-
-게재 여부는 OpenAlex `locations[]` 에 repository가 아닌 source(journal /
-conference / book series)가 있는지로 판정한다. 도메인만 봐서는 절대 알 수 없는
-정보이고, 이 조회가 그걸 알아내는 유일한 지점이다.
-
-### 인용 공백 페널티
-
-| 조건 | 가감 | 플래그 |
-|---|---|---|
-| 인용 0 + 2년 초과 | -6 | `uncited` |
-| 인용 10 미만 + 4년 초과 | -6 | `low-cite` |
-
-### 참여도 (비학술 자료)
-
-```
-gh_pts = min(14, 3.6 · log10(1 + stars))     # 아카이브된 저장소 -4
-hn_pts = min(8,  3.0 · log10(1 + points))    # Hacker News Algolia API
-```
-
-Hacker News 조회는 학술 ID도 GitHub 저장소도 아닌 T3 이하 URL에만 돈다.
-
-### 하드 차단
-
-- OpenAlex `is_retracted == true` → 0점, `RETRACTED`, 즉시 BLOCKED
-- `domains.json` 의 `block` 배열 매치 → 0점, BLOCKED
-
-### 기타 페널티
-
-| 조건 | 가감 | 플래그 |
-|---|---|---|
-| URL에 `/best-`, `/top-10`, `/ultimate-guide` 등 | -6 | `seo-path` |
-| 학술 ID가 있는데 어느 DB에도 없음 | -5 | `no-index` |
-
-## 판정 밴드
-
-| 점수 | 판정 |
+<!-- policy:domains -->
+| Tier | Registered patterns |
 |---|---|
-| 78+ | PRIMARY |
-| 62–77 | SUPPORT |
-| 46–61 | SKIM |
-| 30–45 | WEAK |
-| 0–29 | DROP |
-| 하드 차단 | BLOCKED |
+| 1 | 44 |
+| 2 | 44 |
+| 3 | 54 |
+| 4 | 30 |
+| 5 | 38 |
+| 6 | 26 |
+| block | 13 |
 
-## 실제 채점 예시
+Matching is by registered domain. The longest (most specific) pattern wins, and a `host/path` pattern always beats a host-only one - which is how `nature.com` sits at tier 1 while `nature.com/news` sits at tier 4.
+<!-- /policy:domains -->
 
-| 자료 | 계산 | 결과 |
+## Second pass: evidence signals (adjustments)
+
+### Citations (academic sources only)
+
+<!-- policy:citations -->
+```
+c        = cumulative citations
+age      = years since publication
+cum_pts  = min(20, 6.2 * log10(1 + c))
+vel_pts  = min(9, 4.2 * log10(1 + c / max(0.75, age)))
+```
+<!-- /policy:citations -->
+
+The `max(0.75, age)` floor matters. Without it, a preprint published yesterday
+with two citations scores an annualised velocity of 700 and beats a classic.
+
+Lookup order: OpenAlex (DOI / PMID / arXiv DOI) → Semantic Scholar (arXiv ID) →
+no signal. arXiv papers are found in OpenAlex under the `10.48550/arXiv.{id}` DOI.
+
+### Recency
+
+<!-- policy:halflife -->
+Citation half-life in years, selected with `--field` (default `ai`):
+
+ai 3, cs 4, policy 5, bio 6, med 6, general 6
+<!-- /policy:halflife -->
+
+<!-- policy:recency -->
+```
+age < 1    years  -> +4
+age < 2    years  -> +2
+otherwise         -> -12 * (1 - 0.5^((age - 2) / halflife))
+```
+
+Classics do not rot: at 1000+ citations the decay penalty is waived entirely, and at 300+ citations only 40% of it applies.
+<!-- /policy:recency -->
+
+### Peer-review status
+
+<!-- policy:peer-review -->
+| Condition | Adjustment | Flag |
 |---|---|---|
-| Attention Is All You Need (2017, 13.2만 인용, NeurIPS 게재) | 60 +20 +9 +0 +9 | **98 PRIMARY** |
-| 2022년 학회 논문, 60인용 | 60 +11 +4.5 -4.4 +9 | **80 PRIMARY** |
-| 2026년 화제 프리프린트, 120인용 | 60 +12.9 +9 +4 -8 | **78 SUPPORT** |
-| 갓 나온 0인용 프리프린트 | 60 +0 +0 +4 -8 -4 | **52 SKIM** |
-| 2013년 5인용 프리프린트 | 60 +4.8 +0.6 -11.1 -8 -6 | **40 WEAK** |
-| pytorch/pytorch (★9.2만) | 46 +18 → cap | **60 SKIM** |
-| w3schools 튜토리얼 | 14 | **14 DROP** |
-| grandviewresearch 시장 리포트 | 14 | **14 DROP** |
-| Scribd 업로드 | block | **0 BLOCKED** |
+| Published in a journal or conference | +9 | `published@{venue}` |
+| Still a preprint | -8 | `preprint` |
+| Preprint less than 1 year(s) old with fewer than 5 citations | -4 (additional) | `unvetted` |
 
-## 조정 지침
+Applies only to preprint hosts: arxiv.org, biorxiv.org, medrxiv.org, chemrxiv.org, ssrn.com, researchsquare.com, osf.io, hal.science.
+<!-- /policy:peer-review -->
 
-점수가 체감과 어긋나면 이 순서로 손댄다.
+Publication is decided by OpenAlex `locations[]`: a source that is a journal,
+conference or book series rather than a repository. The domain alone can never
+reveal this, and this lookup is the only place it is discoverable.
 
-1. **개별 사이트가 틀렸다** → `domains.json` 티어 배열만 수정. 대부분 여기서 끝난다.
-2. **분야 전체가 낡게/새롭게 평가된다** → `--field` 를 바꾸거나 `FIELD_HALFLIFE` 수정.
-3. **프리프린트가 전반적으로 과대/과소평가된다** → `score_one()` 의 프리프린트
-   가감(-8/+9) 수정.
-4. **밴드 경계가 안 맞는다** → `VERDICT_BANDS` 수정. 수식은 그대로 두고 임계값만
-   옮기는 게 가장 안전하다.
+### Citation gaps
 
-## 알려진 한계
+<!-- policy:citation-gap -->
+| Condition | Adjustment | Flag |
+|---|---|---|
+| No citations at all, older than 2 years | -6 | `uncited` |
+| Fewer than 10 citations, older than 4 years | -6 | `low-cite` |
 
-- 도메인 등급은 **읽을 대상을 고르는** 장치지 **사실을 보증하는** 장치가 아니다.
-  Nature 논문도 틀릴 수 있고 개인 블로그가 맞을 수 있다. 4단계(주장↔근거 대조)가
-  그 층을 담당한다.
-- 인용수는 분야·연차 편향이 있다. 신생 분야의 좋은 논문이 저평가된다.
-- 비영어권 1차 자료(국내 통계·판례·기업 공시)는 인용 지표가 없어 도메인 등급에만
-  의존한다. `domains.json` 에 직접 추가해서 보완한다.
-- 자기인용·인용 링(citation ring)은 걸러내지 않는다.
-- HN/GitHub 지표는 인기지 정확성이 아니다. 상한(+8/+14)을 낮게 잡은 이유다.
+First matching rule wins.
+<!-- /policy:citation-gap -->
+
+### Engagement (non-academic sources)
+
+<!-- policy:engagement -->
+```
+gh_pts = min(14, 3.6 * log10(1 + stars))     # archived repository -4
+hn_pts = min(8, 3 * log10(1 + points))
+```
+
+The Hacker News lookup only runs for tier 3 and below when the URL carries no academic identifier and no GitHub repository.
+<!-- /policy:engagement -->
+
+### Other penalties
+
+<!-- policy:penalties -->
+| Condition | Adjustment | Flag |
+|---|---|---|
+| URL contains a listicle path pattern (`/best-`, `/top-10`, `/top-5`, ...) | -6 | `seo-path` |
+| URL carries an academic ID that no database knows | -5 | `no-index` |
+
+Full pattern list (11): `/best-`, `/top-10`, `/top-5`, `/top-7`, `/ultimate-guide`, `/everything-you-need-to-know`, `-in-2023`, `-in-2024`, `/what-is-`, `/complete-guide-to`, `/beginners-guide`.
+<!-- /policy:penalties -->
+
+### Hard blocks
+
+- OpenAlex `is_retracted == true` → score 0, flag `RETRACTED`, verdict BLOCKED.
+- A match in the `block` domain list → score 0, verdict BLOCKED.
+
+Both short-circuit: no adjustment can lift a blocked source.
+
+## Verdict bands
+
+<!-- policy:bands -->
+| Verdict | Score | What to do with it |
+|---|---|---|
+| PRIMARY | 78+ | Cite directly. Valid source for figures and claims |
+| SUPPORT | 62-77 | Supporting evidence. Never the sole basis for a conclusion |
+| SKIM | 46-61 | Cross-checking only. Cite only when another source says the same |
+| WEAK | 30-45 | Background reading. Do not cite |
+| DROP | 0-29 | Do not open |
+| BLOCKED | 0 | Hard block: retracted paper or blocklisted host. Never use |
+<!-- /policy:bands -->
+
+## Worked examples
+
+These are the golden regression cases in `scripts/golden.json`, scored by the
+current policy. They run offline — academic cases inject a synthetic record so
+the arithmetic stays deterministic — and the pre-commit hook re-runs them.
+
+<!-- policy:examples -->
+| Case | Score | Verdict |
+|---|---|---|
+| landmark paper, published, massively cited | 98.0 | PRIMARY |
+| conference paper, moderate citations | 81.8 | PRIMARY |
+| hot recent preprint | 77.9 | SUPPORT |
+| brand new preprint, nobody has cited it | 52.0 | SKIM |
+| old preprint that went nowhere | 40.4 | WEAK |
+| retracted paper is blocked outright | 0.0 | BLOCKED |
+| popular repository | 60.0 | SKIM |
+| archived repository loses ground | 53.1 | SKIM |
+| top-tier journal, no identifier in the URL | 88.0 | PRIMARY |
+| path pattern beats host pattern | 46.0 | SKIM |
+| unregistered domain falls back to the default tier | 32.0 | WEAK |
+| listicle path penalty | 26.0 | DROP |
+| content farm | 14.0 | DROP |
+| market-research spam | 14.0 | DROP |
+| blocklisted host | 0.0 | BLOCKED |
+<!-- /policy:examples -->
+
+## Tuning
+
+When a score disagrees with your judgement, work down this list. Every step is
+a `policy.json` edit; none of them touch `srcscore.py`.
+
+1. **One site is misplaced** → move it between `domains` tier arrays. Most
+   complaints end here.
+2. **A whole field reads as too stale or too fresh** → pass a different
+   `--field`, or change `field_halflife_years`.
+3. **Preprints are over- or under-valued across the board** → change
+   `peer_review.published_bonus` / `preprint_penalty`.
+4. **The band edges are wrong** → move `verdicts.bands[].min`. Leaving the
+   formulas alone and shifting only the thresholds is the safest change.
+
+After any edit:
+
+```bash
+python3 scripts/check_policy.py --fix     # regenerate this page from policy.json
+python3 scripts/check_policy.py           # verify docs + golden cases
+```
+
+If a change intentionally moves the golden scores, re-baseline them with
+`--bless` and read the resulting diff before committing.
+
+## Known limits
+
+- A domain tier is a device for **choosing what to read**, not a guarantee that
+  the content is **true**. A Nature paper can be wrong and a personal blog can be
+  right. Step 5 of the skill (claims vs. evidence) covers that layer.
+- Citation counts carry field and seniority bias. Good work in a young field
+  scores low.
+- Non-English primary sources (national statistics, court rulings, corporate
+  filings) have no citation signal and lean entirely on the domain tier. Add
+  them to `policy.json` directly.
+- Self-citation and citation rings are not filtered out.
+- GitHub and Hacker News numbers measure popularity, not accuracy. That is why
+  their caps are set low.

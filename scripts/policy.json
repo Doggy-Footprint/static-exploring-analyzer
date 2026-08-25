@@ -1,0 +1,184 @@
+{
+  "_readme": "Single source of truth for scored-web-search. srcscore.py reads ONLY this file for scoring behaviour; nothing is hard-coded in the script. references/scoring.md is generated from this file and checked by scripts/check_policy.py (run automatically by the pre-commit hook).",
+  "version": "2.0.0",
+
+  "defaults": {
+    "field": "ai",
+    "unregistered_tier": "5",
+    "workers": 8,
+    "http_timeout_seconds": 12,
+    "cache_ttl_days": 14
+  },
+
+  "tiers": {
+    "1": { "base": 88, "label": "Academic journals, official statistics, standards bodies" },
+    "2": { "base": 74, "label": "Reputable journals, major institutions and universities" },
+    "3": { "base": 60, "label": "Preprints, major research-lab and vendor engineering blogs" },
+    "4": { "base": 46, "label": "Trade media, well-known individual technical blogs" },
+    "5": { "base": 32, "label": "General media, community sites, aggregators (default for unregistered domains)" },
+    "6": { "base": 14, "label": "SEO content farms, unsourced listicles, market-research spam" },
+    "block": { "base": 0, "label": "Scrapers, mirrors, plagiarism hosts. Always BLOCKED" }
+  },
+
+  "verdicts": {
+    "blocked_name": "BLOCKED",
+    "bands": [
+      { "name": "PRIMARY", "min": 78, "use": "Cite directly. Valid source for figures and claims" },
+      { "name": "SUPPORT", "min": 62, "use": "Supporting evidence. Never the sole basis for a conclusion" },
+      { "name": "SKIM", "min": 46, "use": "Cross-checking only. Cite only when another source says the same" },
+      { "name": "WEAK", "min": 30, "use": "Background reading. Do not cite" },
+      { "name": "DROP", "min": 0, "use": "Do not open" }
+    ]
+  },
+
+  "field_halflife_years": {
+    "ai": 3.0,
+    "cs": 4.0,
+    "policy": 5.0,
+    "bio": 6.0,
+    "med": 6.0,
+    "general": 6.0
+  },
+
+  "citations": {
+    "cumulative": { "coefficient": 6.2, "cap": 20.0 },
+    "velocity": { "coefficient": 4.2, "cap": 9.0, "min_age_years": 0.75 }
+  },
+
+  "recency": {
+    "fresh_bonuses": [
+      { "max_age_years": 1.0, "points": 4.0 },
+      { "max_age_years": 2.0, "points": 2.0 }
+    ],
+    "decay": { "grace_years": 2.0, "max_penalty": -12.0 },
+    "classic_exemption_citations": 1000,
+    "classic_softening": { "citations": 300, "factor": 0.4 }
+  },
+
+  "peer_review": {
+    "published_bonus": 9.0,
+    "preprint_penalty": -8.0,
+    "unvetted": { "max_age_years": 1.0, "max_citations": 5, "penalty": -4.0 }
+  },
+
+  "citation_gap": [
+    { "flag": "uncited", "max_citations": 0, "min_age_years": 2.0, "penalty": -6.0 },
+    { "flag": "low-cite", "max_citations": 9, "min_age_years": 4.0, "penalty": -6.0 }
+  ],
+
+  "engagement": {
+    "github": { "coefficient": 3.6, "cap": 14.0, "archived_penalty": -4.0 },
+    "hackernews": { "coefficient": 3.0, "cap": 8.0, "min_tier": 3 }
+  },
+
+  "penalties": {
+    "seo_path": { "points": -6.0, "flag": "seo-path" },
+    "no_index": { "points": -5.0, "flag": "no-index" }
+  },
+
+  "seo_path_patterns": [
+    "/best-", "/top-10", "/top-5", "/top-7", "/ultimate-guide",
+    "/everything-you-need-to-know", "-in-2023", "-in-2024",
+    "/what-is-", "/complete-guide-to", "/beginners-guide"
+  ],
+
+  "preprint_hosts": [
+    "arxiv.org", "biorxiv.org", "medrxiv.org", "chemrxiv.org",
+    "ssrn.com", "researchsquare.com", "osf.io", "hal.science"
+  ],
+
+  "domains": {
+    "1": [
+      "nature.com", "science.org", "cell.com", "pnas.org", "nejm.org",
+      "thelancet.com", "bmj.com", "jamanetwork.com",
+      "ieee.org", "ieeexplore.ieee.org", "dl.acm.org", "acm.org",
+      "jmlr.org", "proceedings.mlr.press", "papers.nips.cc", "neurips.cc",
+      "aclanthology.org", "usenix.org",
+      "iso.org", "ietf.org", "rfc-editor.org", "w3.org", "nist.gov",
+      "census.gov", "bls.gov", "federalreserve.gov", "imf.org", "worldbank.org",
+      "oecd.org", "who.int", "cdc.gov", "nih.gov", "pubmed.ncbi.nlm.nih.gov",
+      "eurostat.ec.europa.eu", "kostat.go.kr", "bok.or.kr", "kdi.re.kr",
+      "law.go.kr", "sec.gov", "eur-lex.europa.eu", "uspto.gov", "epo.org",
+      "clinicaltrials.gov", "cochranelibrary.com"
+    ],
+    "2": [
+      "springer.com", "link.springer.com", "sciencedirect.com", "wiley.com",
+      "onlinelibrary.wiley.com", "tandfonline.com", "sagepub.com",
+      "journals.plos.org", "elifesciences.org", "frontiersin.org",
+      "mdpi.com", "openreview.net",
+      "nber.org", "brookings.edu", "rand.org", "pewresearch.org",
+      "gartner.com", "forrester.com", "idc.com", "mckinsey.com",
+      "bcg.com", "bain.com", "deloitte.com", "pwc.com",
+      "statista.com", "ourworldindata.org",
+      "cmu.edu", "mit.edu", "stanford.edu", "berkeley.edu", "ox.ac.uk",
+      "cam.ac.uk", "ethz.ch", "kaist.ac.kr", "snu.ac.kr",
+      "nasa.gov", "esa.int", "energy.gov", "europa.eu", "go.kr", "korea.kr",
+      "semanticscholar.org", "doi.org", "crossref.org"
+    ],
+    "3": [
+      "arxiv.org", "biorxiv.org", "medrxiv.org", "ssrn.com", "osf.io",
+      "papers.ssrn.com", "researchsquare.com", "chemrxiv.org",
+      "anthropic.com", "openai.com", "deepmind.google", "ai.googleblog.com",
+      "research.google", "blog.google", "ai.meta.com", "research.facebook.com",
+      "microsoft.com/en-us/research", "nvidia.com", "developer.nvidia.com",
+      "huggingface.co", "pytorch.org", "tensorflow.org", "jax.readthedocs.io",
+      "docs.python.org", "developer.mozilla.org", "kernel.org",
+      "aws.amazon.com/blogs", "cloud.google.com", "azure.microsoft.com",
+      "docs.claude.com", "platform.openai.com", "docs.anthropic.com",
+      "github.blog", "stripe.com/blog", "netflixtechblog.com",
+      "engineering.fb.com", "eng.uber.com", "slack.engineering",
+      "cloudflare.com", "blog.cloudflare.com", "mozilla.org",
+      "distill.pub", "lilianweng.github.io", "karpathy.github.io",
+      "colah.github.io", "sebastianraschka.com", "epoch.ai", "epochai.org",
+      "lmsys.org", "eleuther.ai", "allenai.org", "bair.berkeley.edu",
+      "thegradient.pub", "jalammar.github.io"
+    ],
+    "4": [
+      "arstechnica.com", "theverge.com", "wired.com", "technologyreview.com",
+      "spectrum.ieee.org", "quantamagazine.org", "nature.com/news",
+      "ft.com", "economist.com", "wsj.com", "bloomberg.com", "reuters.com",
+      "apnews.com", "nytimes.com", "washingtonpost.com", "theguardian.com",
+      "semianalysis.com", "stratechery.com", "importai.substack.com",
+      "simonwillison.net", "martinfowler.com", "danluu.com",
+      "acoup.blog", "astralcodexten.com", "lesswrong.com",
+      "infoq.com", "thenewstack.io", "theregister.com",
+      "news.ycombinator.com", "github.com"
+    ],
+    "5": [
+      "medium.com", "towardsdatascience.com", "dev.to", "hashnode.com",
+      "substack.com", "wordpress.com", "blogspot.com", "tistory.com",
+      "velog.io", "brunch.co.kr", "naver.com", "blog.naver.com",
+      "reddit.com", "stackoverflow.com", "stackexchange.com",
+      "quora.com", "x.com", "twitter.com", "linkedin.com",
+      "youtube.com", "wikipedia.org", "cnn.com", "bbc.com", "forbes.com",
+      "businessinsider.com", "techcrunch.com", "venturebeat.com",
+      "zdnet.com", "cnet.com", "engadget.com", "mashable.com",
+      "hankyung.com", "mk.co.kr", "chosun.com", "joongang.co.kr",
+      "etnews.com", "zdnet.co.kr", "bloter.net"
+    ],
+    "6": [
+      "geeksforgeeks.org", "w3schools.com", "tutorialspoint.com",
+      "javatpoint.com", "simplilearn.com", "guru99.com", "edureka.co",
+      "analyticsvidhya.com", "kdnuggets.com", "datacamp.com/blog",
+      "hackr.io", "codecademy.com/resources", "turing.com/blog",
+      "aimultiple.com", "marketsandmarkets.com", "grandviewresearch.com",
+      "alliedmarketresearch.com", "mordorintelligence.com",
+      "precedenceresearch.com", "fortunebusinessinsights.com",
+      "expertbeacon.com", "byjus.com", "unstop.com", "naukri.com",
+      "linkedin.com/pulse", "quora.com/profile"
+    ],
+    "block": [
+      "sci-hub.se", "libgen.is", "researchgate.net/publication/preview",
+      "paperswithcode.com/paper/mirror", "semantic-scholar-mirror.com",
+      "arxiv-sanity-lite.com/mirror", "chatgptdetector.co",
+      "coursehero.com", "scribd.com", "studocu.com", "slideshare.net",
+      "issuu.com", "academia.edu"
+    ]
+  },
+
+  "notes": [
+    "mdpi / frontiers vary a lot per journal: kept at tier 2 but leaning heavily on citation adjustment.",
+    "github.com sits at tier 4 and is moved mostly by actual star count.",
+    "wikipedia is tier 5; SKILL.md instructs using it only to walk footnotes back to primary sources."
+  ]
+}

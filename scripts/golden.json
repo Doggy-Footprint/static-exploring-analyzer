@@ -1,0 +1,139 @@
+{
+  "_readme": "Golden regression cases for srcscore.py. Every case runs offline: domain-only cases use no network at all, and academic cases inject a synthetic scholarly record (`inject.scholar`) so the arithmetic is deterministic. `age_years` is given directly instead of a date so fixtures do not rot as the calendar moves. Run with `python3 scripts/check_policy.py`; re-baseline deliberately with `--bless` after a policy change you actually intended.",
+  "cases": [
+    {
+      "name": "landmark paper, published, massively cited",
+      "url": "https://arxiv.org/abs/1706.03762",
+      "field": "ai",
+      "inject": {
+        "scholar": {
+          "title": "Attention Is All You Need",
+          "citations": 132000, "year": 2017, "age_years": 9.2,
+          "peer_reviewed": true, "venue": "NeurIPS"
+        }
+      },
+      "expect": { "score": 98.0, "verdict": "PRIMARY", "tier": "3" }
+    },
+    {
+      "name": "conference paper, moderate citations",
+      "url": "https://arxiv.org/abs/2201.11111",
+      "field": "ai",
+      "inject": {
+        "scholar": {
+          "title": "A published conference paper",
+          "citations": 60, "year": 2022, "age_years": 3.5,
+          "peer_reviewed": true, "venue": "ICML"
+        }
+      },
+      "expect": { "score": 81.8, "verdict": "PRIMARY", "tier": "3" }
+    },
+    {
+      "name": "hot recent preprint",
+      "url": "https://arxiv.org/abs/2601.22222",
+      "field": "ai",
+      "inject": {
+        "scholar": {
+          "title": "A widely shared preprint",
+          "citations": 120, "year": 2026, "age_years": 0.5,
+          "peer_reviewed": false
+        }
+      },
+      "expect": { "score": 77.9, "verdict": "SUPPORT", "tier": "3" }
+    },
+    {
+      "name": "brand new preprint, nobody has cited it",
+      "url": "https://arxiv.org/abs/2608.33333",
+      "field": "ai",
+      "inject": {
+        "scholar": {
+          "title": "An unvetted preprint",
+          "citations": 0, "year": 2026, "age_years": 0.2,
+          "peer_reviewed": false
+        }
+      },
+      "expect": { "score": 52.0, "verdict": "SKIM", "tier": "3" }
+    },
+    {
+      "name": "old preprint that went nowhere",
+      "url": "https://arxiv.org/abs/1301.44444",
+      "field": "ai",
+      "inject": {
+        "scholar": {
+          "title": "A stale preprint",
+          "citations": 5, "year": 2013, "age_years": 13.0,
+          "peer_reviewed": false
+        }
+      },
+      "expect": { "score": 40.4, "verdict": "WEAK", "tier": "3" }
+    },
+    {
+      "name": "retracted paper is blocked outright",
+      "url": "https://www.nature.com/articles/s41586-000-00000-0",
+      "field": "bio",
+      "inject": {
+        "scholar": {
+          "title": "A retracted study",
+          "citations": 900, "year": 2020, "age_years": 6.0,
+          "peer_reviewed": true, "is_retracted": true
+        }
+      },
+      "expect": { "score": 0.0, "verdict": "BLOCKED", "tier": "1" }
+    },
+    {
+      "name": "popular repository",
+      "url": "https://github.com/pytorch/pytorch",
+      "field": "ai",
+      "inject": { "github": { "stars": 92000, "archived": false } },
+      "expect": { "score": 60.0, "verdict": "SKIM", "tier": "4" }
+    },
+    {
+      "name": "archived repository loses ground",
+      "url": "https://github.com/someone/abandoned",
+      "field": "cs",
+      "inject": { "github": { "stars": 1200, "archived": true } },
+      "expect": { "score": 53.1, "verdict": "SKIM", "tier": "4" }
+    },
+    {
+      "name": "top-tier journal, no identifier in the URL",
+      "url": "https://www.nature.com/articles/d41586-026-01234-5",
+      "field": "general",
+      "expect": { "score": 88.0, "verdict": "PRIMARY", "tier": "1" }
+    },
+    {
+      "name": "path pattern beats host pattern",
+      "url": "https://www.nature.com/news/some-news-story",
+      "field": "general",
+      "expect": { "score": 46.0, "verdict": "SKIM", "tier": "4" }
+    },
+    {
+      "name": "unregistered domain falls back to the default tier",
+      "url": "https://some-unknown-blog.example.org/post/1",
+      "field": "ai",
+      "expect": { "score": 32.0, "verdict": "WEAK", "tier": "5" }
+    },
+    {
+      "name": "listicle path penalty",
+      "url": "https://medium.com/best-python-libraries-2026",
+      "field": "cs",
+      "expect": { "score": 26.0, "verdict": "DROP", "tier": "5" }
+    },
+    {
+      "name": "content farm",
+      "url": "https://www.w3schools.com/python/python_intro.asp",
+      "field": "cs",
+      "expect": { "score": 14.0, "verdict": "DROP", "tier": "6" }
+    },
+    {
+      "name": "market-research spam",
+      "url": "https://www.grandviewresearch.com/industry-analysis/ai-market",
+      "field": "general",
+      "expect": { "score": 14.0, "verdict": "DROP", "tier": "6" }
+    },
+    {
+      "name": "blocklisted host",
+      "url": "https://www.scribd.com/document/12345/leaked-report",
+      "field": "general",
+      "expect": { "score": 0.0, "verdict": "BLOCKED", "tier": "block" }
+    }
+  ]
+}

@@ -26,7 +26,7 @@ Max 2 sub-topics per subagent. For 3 or more sub-topics, run subagents in parall
 
 ### Step 2 — Score: hand it to the script
 
-Write all subagent returns to `urls.txt`(one URL per line) in temporal directory and run `sciprts/srcscore.py`. You can check arguments with `--help`.
+Write all subagent returns to `urls.txt`(one URL per line) in temporal directory and run `scripts/srcscore.py`. You can check arguments with `--help`.
 
 Output is a compact table, roughly 15 tokens per line:
 
