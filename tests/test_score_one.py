@@ -117,6 +117,59 @@ class SeoAndNoIndexTests(unittest.TestCase):
                     injected={"scholar": {}, "github": None, "hn": None})
         self.assertNotIn("no-index", row["flags"])
 
+    def test_fresh_arxiv_id_within_grace_gets_reduced_flag_not_flat_penalty(self):
+        # ~2 weeks old, pinned via override so this test doesn't depend on
+        # wall-clock date.
+        row = score(
+            "https://arxiv.org/abs/2608.10101", use_net=True,
+            injected={"scholar": {}, "github": None, "hn": None,
+                      "arxiv_age_years": 0.04})
+        self.assertIn("no-index-recent", row["flags"])
+        self.assertNotIn("no-index", row["flags"])
+        self.assertEqual(row["score"], 52.0)  # 60 (tier 3) - 8 (grace penalty)
+        self.assertEqual(row["verdict"], "SKIM")
+
+    def test_arxiv_id_two_months_old_still_within_grace(self):
+        row = score(
+            "https://arxiv.org/abs/2606.20202", use_net=True,
+            injected={"scholar": {}, "github": None, "hn": None,
+                      "arxiv_age_years": 0.167})  # ~2 months
+        self.assertIn("no-index-recent", row["flags"])
+        self.assertEqual(row["score"], 52.0)
+
+    def test_arxiv_id_eight_months_old_past_grace_gets_flat_no_index(self):
+        row = score(
+            "https://arxiv.org/abs/2512.30303", use_net=True,
+            injected={"scholar": {}, "github": None, "hn": None,
+                      "arxiv_age_years": 0.667})  # ~8 months
+        self.assertIn("no-index", row["flags"])
+        self.assertNotIn("no-index-recent", row["flags"])
+        self.assertEqual(row["score"], 55.0)  # 60 - 5 (flat, unchanged)
+
+    def test_very_old_unindexed_arxiv_id_unchanged_by_grace(self):
+        # 1706.03762 decodes to 2017-06, many years past the grace window;
+        # confirms real (non-overridden) id decoding still works.
+        row = score(
+            "https://arxiv.org/abs/1706.03762", use_net=True,
+            injected={"scholar": {}, "github": None, "hn": None})
+        self.assertIn("no-index", row["flags"])
+        self.assertNotIn("no-index-recent", row["flags"])
+
+    def test_doi_no_index_penalty_unaffected_by_arxiv_grace_logic(self):
+        row = score(
+            "https://doi.org/10.1234/example.5678", use_net=True,
+            injected={"scholar": {}, "github": None, "hn": None})
+        self.assertIn("no-index", row["flags"])
+        self.assertNotIn("no-index-recent", row["flags"])
+
+    def test_arxiv_id_age_years_decodes_new_and_old_schemes(self):
+        self.assertAlmostEqual(
+            S.arxiv_id_age_years("2506.03762"), S.age_years("2025-06-01", None))
+        self.assertAlmostEqual(
+            S.arxiv_id_age_years("hep-th/9901001"), S.age_years("1999-01-01", None))
+        self.assertIsNone(S.arxiv_id_age_years(""))
+        self.assertIsNone(S.arxiv_id_age_years("not-an-id"))
+
 
 class ClampingTests(unittest.TestCase):
     def test_score_never_exceeds_100(self):

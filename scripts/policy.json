@@ -73,7 +73,11 @@
 
   "penalties": {
     "seo_path": { "points": -6.0, "flag": "seo-path" },
-    "no_index": { "points": -5.0, "flag": "no-index" }
+    "no_index": {
+      "points": -5.0,
+      "flag": "no-index",
+      "grace": { "max_age_years": 0.25, "points": -8.0, "flag": "no-index-recent" }
+    }
   },
 
   "seo_path_patterns": [

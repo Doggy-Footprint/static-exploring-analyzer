@@ -124,7 +124,8 @@ The Hacker News lookup only runs for tier 3 and below when the URL carries no ac
 | Condition | Adjustment | Flag |
 |---|---|---|
 | URL contains a listicle path pattern (`/best-`, `/top-10`, `/top-5`, ...) | -6 | `seo-path` |
-| URL carries an academic ID that no database knows | -5 | `no-index` |
+| URL carries an academic ID that no database knows, and either it isn't an arXiv id or the arXiv id decodes to 0.25+ years old | -5 | `no-index` |
+| arXiv id decodes to under 0.25 years old and no database knows it yet (indexing lag, not evidence of low quality) | -8 | `no-index-recent` |
 
 Full pattern list (11): `/best-`, `/top-10`, `/top-5`, `/top-7`, `/ultimate-guide`, `/everything-you-need-to-know`, `-in-2023`, `-in-2024`, `/what-is-`, `/complete-guide-to`, `/beginners-guide`.
 <!-- /policy:penalties -->
@@ -212,3 +213,10 @@ If a change intentionally moves the golden scores, re-baseline them with
 - Self-citation and citation rings are not filtered out.
 - GitHub and Hacker News numbers measure popularity, not accuracy. That is why
   their caps are set low.
+- A brand-new arXiv preprint gets a short grace period (`policy.json`
+  `penalties.no_index.grace`) before the no-index penalty applies at full
+  strength, since arXiv ids embed a submission date that can be decoded
+  without a lookup and indexing into Semantic Scholar/OpenAlex normally lags
+  submission by weeks. DOI- and PMID-only sources have no embeddable date, so
+  they still get the flat no-index penalty immediately - there is no
+  lookup-free way to estimate their age.

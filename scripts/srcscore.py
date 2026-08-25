@@ -346,6 +346,32 @@ def extract_ids(url: str) -> dict:
     return ids
 
 
+_ARXIV_NEW_ID_RE = re.compile(r"^(\d{2})(\d{2})\.\d{4,5}$")
+_ARXIV_OLD_ID_RE = re.compile(r"^[a-z\-]+(?:\.[A-Z]{2})?/(\d{2})(\d{2})\d{3}$", re.I)
+
+
+def arxiv_id_age_years(arxiv_id: str):
+    """Decode the YYMM submission month baked into an arXiv id - both the
+    2007+ `YYMM.NNNNN` scheme and the pre-2007 `archive.subj-class/YYMMNNN`
+    scheme embed it - and return the paper's age in years with no network
+    call. Returns None if `arxiv_id` doesn't match either scheme.
+    """
+    if not arxiv_id:
+        return None
+    m = _ARXIV_NEW_ID_RE.match(arxiv_id)
+    old = False
+    if not m:
+        m = _ARXIV_OLD_ID_RE.match(arxiv_id)
+        old = True
+    if not m:
+        return None
+    yy, mm = int(m.group(1)), int(m.group(2))
+    if not 1 <= mm <= 12:
+        return None
+    year = 1900 + yy if old and yy >= 91 else 2000 + yy
+    return age_years("%04d-%02d-01" % (year, mm), None)
+
+
 # ----------------------------------------------------------------------------
 # External lookups (all free, no API key)
 # ----------------------------------------------------------------------------
@@ -679,8 +705,21 @@ def score_one(item: dict, policy: dict, cache: Cache, field: str,
     elif (use_net and "lookup-failed" not in flags
           and (ids.get("arxiv") or ids.get("doi") or ids.get("pmid"))):
         ni = policy["penalties"]["no_index"]
-        adj += float(ni["points"])
-        flags.append(ni["flag"])  # an academic ID in no academic database is suspicious
+        grace = ni.get("grace")
+        arxiv_id = ids.get("arxiv")
+        arxiv_age = None
+        if arxiv_id:
+            # override lets golden/unit tests pin a deterministic age, same
+            # convention as sch["age_years"] above.
+            arxiv_age = injected.get("arxiv_age_years")
+            if arxiv_age is None:
+                arxiv_age = arxiv_id_age_years(arxiv_id)
+        if grace and arxiv_age is not None and arxiv_age < float(grace["max_age_years"]):
+            adj += float(grace["points"])
+            flags.append(grace["flag"])  # too new to be indexed anywhere yet
+        else:
+            adj += float(ni["points"])
+            flags.append(ni["flag"])  # an academic ID in no academic database is suspicious
 
     ep, enotes = engagement_points(policy, gh, hn)
     adj += ep

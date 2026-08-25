@@ -168,11 +168,20 @@ def render_penalties(p, _g):
     out = ["| Condition | Adjustment | Flag |", "|---|---|---|"]
     seo = p["penalties"]["seo_path"]
     ni = p["penalties"]["no_index"]
+    grace = ni.get("grace")
     out.append("| URL contains a listicle path pattern (%s, ...) | %s | `%s` |"
                % (", ".join("`%s`" % s for s in p["seo_path_patterns"][:3]),
                   _signed(seo["points"]), seo["flag"]))
-    out.append("| URL carries an academic ID that no database knows | %s | `%s` |"
-               % (_signed(ni["points"]), ni["flag"]))
+    if grace:
+        out.append("| URL carries an academic ID that no database knows, and either it "
+                   "isn't an arXiv id or the arXiv id decodes to %s+ years old | %s | `%s` |"
+                   % (_num(grace["max_age_years"]), _signed(ni["points"]), ni["flag"]))
+        out.append("| arXiv id decodes to under %s years old and no database knows it yet "
+                   "(indexing lag, not evidence of low quality) | %s | `%s` |"
+                   % (_num(grace["max_age_years"]), _signed(grace["points"]), grace["flag"]))
+    else:
+        out.append("| URL carries an academic ID that no database knows | %s | `%s` |"
+                   % (_signed(ni["points"]), ni["flag"]))
     out.append("")
     out.append("Full pattern list (%d): %s."
                % (len(p["seo_path_patterns"]),
