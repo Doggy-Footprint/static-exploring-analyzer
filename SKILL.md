@@ -20,7 +20,7 @@ This skill filters sub-standard sources before the main agent reads them when hi
 
 ### Step 1 — Search: collect URLs only
 
-The main agent defines the search keywords. Delegate the actual web search to a **lightweight subagent** (do NOT use `fork` / make subagent to call web-search tools at a single turn.) and accept only a `URL | title` list in return. NO summaries, NO snippets, DO NOT open page — the point of this step is to keep low-quality text out of the main context.
+The main agent defines the search keywords. Delegate the actual web search to a **lightweight subagent** (do NOT use `fork` / make subagent to call web-search tools at a single turn. / use gpt-5.6-luna or haiku-4.5) and accept only a `URL | title` list in return. NO summaries, NO snippets, DO NOT open page — the point of this step is to keep low-quality text out of the main context.
 
 Max 2 sub-topics per subagent. For 3 or more sub-topics, run subagents in parallel. Collect 40-60 URLs total.
 
