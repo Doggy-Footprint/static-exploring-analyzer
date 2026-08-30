@@ -7,13 +7,13 @@ from concurrent.futures import ThreadPoolExecutor
 
 from .fetchers import FETCH_FAILED, arxiv_lookup, github_repo, hn_points, openalex_by_doi, \
     openalex_by_pmid
-from .identifiers import arxiv_id_age_years, extract_ids
+from .identifiers import arxiv_id_age_years, extract_ids, extract_person_handle
 from .policy import blocked_name, signal_enabled, tier_base, verdict_for
 from .util import age_years, host_matches, host_path, human, norm_host
 
 __all__ = [
     "match_tier", "citation_points", "recency_points", "engagement_points",
-    "score_one", "score_many",
+    "trusted_person_points", "score_one", "score_many",
 ]
 
 
@@ -92,6 +92,23 @@ def engagement_points(policy: dict, gh, hn):
         pts += min(float(h["cap"]), float(h["coefficient"]) * math.log10(1 + p))
         notes.append("HN%d" % p)
     return pts, notes
+
+
+def trusted_person_points(policy: dict, url: str):
+    """Bonus for a URL that is the profile/post of a known reliable person,
+    per `policy["trusted_people"]` (community-opinion mode only - see
+    modes/community_opinion.json). Handle matching is case-insensitive."""
+    tp = policy.get("trusted_people")
+    if not tp:
+        return 0.0, []
+    person = extract_person_handle(url)
+    if not person:
+        return 0.0, []
+    host, handle = person
+    handles = {h.lower() for h in tp.get("hosts", {}).get(host, [])}
+    if handle not in handles:
+        return 0.0, []
+    return float(tp["bonus"]), ["trusted:%s" % handle]
 
 
 def _result(item, score, verdict, tier, pat, flags, meta, notes=None):
@@ -233,6 +250,10 @@ def score_one(item: dict, policy: dict, cache, field: str,
         ep, enotes = engagement_points(policy, gh, hn)
         adj += ep
         notes.extend(enotes)
+
+    tp_pts, tp_notes = trusted_person_points(policy, url)
+    adj += tp_pts
+    notes.extend(tp_notes)
 
     total = max(0.0, min(100.0, base + adj))
     return _result(item, total, verdict_for(policy, total), tier, pat, flags, meta, notes)

@@ -1,0 +1,103 @@
+{
+  "_readme": "Golden regression cases for --mode non-academic (GitHub repos, engineering blogs). Verifies engagement is weighted higher than academic mode (see modes/non_academic.json) and that citations/peer-review stay on. Run with `python3 scripts/check_policy.py`; re-baseline with `--bless` after a deliberate policy change.",
+  "cases": [
+    {
+      "name": "engineering blog post, huge repo engagement pushes it to PRIMARY",
+      "url": "https://pytorch.org/blog/announcing-new-release",
+      "field": "cs",
+      "inject": {
+        "github": {
+          "stars": 300000,
+          "archived": false
+        }
+      },
+      "expect": {
+        "score": 84.0,
+        "verdict": "PRIMARY",
+        "tier": "3"
+      }
+    },
+    {
+      "name": "popular repository crosses into SUPPORT under heavier engagement weighting",
+      "url": "https://github.com/pytorch/pytorch",
+      "field": "cs",
+      "inject": {
+        "github": {
+          "stars": 92000,
+          "archived": false
+        }
+      },
+      "expect": {
+        "score": 70.0,
+        "verdict": "SUPPORT",
+        "tier": "4"
+      }
+    },
+    {
+      "name": "archived repository still loses ground, lands SKIM",
+      "url": "https://github.com/someone/abandoned",
+      "field": "cs",
+      "inject": {
+        "github": {
+          "stars": 1200,
+          "archived": true
+        }
+      },
+      "expect": {
+        "score": 58.6,
+        "verdict": "SKIM",
+        "tier": "4"
+      }
+    },
+    {
+      "name": "conference paper, moderate citations - peer-review still active in this mode",
+      "url": "https://arxiv.org/abs/2201.11111",
+      "field": "cs",
+      "inject": {
+        "scholar": {
+          "title": "A published conference paper",
+          "citations": 60,
+          "year": 2022,
+          "age_years": 3.5,
+          "peer_reviewed": true,
+          "venue": "ICML"
+        }
+      },
+      "expect": {
+        "score": 82.6,
+        "verdict": "PRIMARY",
+        "tier": "3"
+      }
+    },
+    {
+      "name": "unregistered engineering blog falls to default tier",
+      "url": "https://some-random-eng-blog.example.org/post/1",
+      "field": "cs",
+      "expect": {
+        "score": 32.0,
+        "verdict": "WEAK",
+        "tier": "5"
+      }
+    },
+    {
+      "name": "listicle path penalty on a dev blog aggregator",
+      "url": "https://medium.com/best-python-libraries-2026",
+      "field": "cs",
+      "expect": {
+        "score": 26.0,
+        "verdict": "DROP",
+        "tier": "5"
+      }
+    },
+    {
+      "name": "blocklisted mirror",
+      "url": "https://www.scribd.com/document/12345/leaked-report",
+      "field": "cs",
+      "expect": {
+        "score": 0.0,
+        "verdict": "BLOCKED",
+        "tier": "block"
+      }
+    }
+  ]
+}

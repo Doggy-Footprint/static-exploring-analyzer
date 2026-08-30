@@ -1,0 +1,41 @@
+{
+  "_readme": "Golden regression cases for --mode news (news coverage). Verifies peer-review is off and that domain tier + engagement dominate, since the recency signal only applies to URLs carrying a scholar record (rare for news pages). Run with `python3 scripts/check_policy.py`; re-baseline with `--bless` after a deliberate policy change.",
+  "cases": [
+    {
+      "name": "official government statement",
+      "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-statement.htm",
+      "field": "news",
+      "expect": { "score": 88.0, "verdict": "PRIMARY", "tier": "1" }
+    },
+    {
+      "name": "reputable policy institute coverage",
+      "url": "https://www.brookings.edu/articles/some-analysis",
+      "field": "news",
+      "expect": { "score": 74.0, "verdict": "SUPPORT", "tier": "2" }
+    },
+    {
+      "name": "wire-service report, no extra corroboration",
+      "url": "https://www.reuters.com/technology/some-story",
+      "field": "news",
+      "expect": { "score": 46.0, "verdict": "SKIM", "tier": "4" }
+    },
+    {
+      "name": "unregistered outlet falls to default tier",
+      "url": "https://some-local-news-site.example.org/story/1",
+      "field": "news",
+      "expect": { "score": 32.0, "verdict": "WEAK", "tier": "5" }
+    },
+    {
+      "name": "listicle path penalty on a general media site",
+      "url": "https://www.forbes.com/sites/example/best-ai-news-apps-2026",
+      "field": "news",
+      "expect": { "score": 26.0, "verdict": "DROP", "tier": "5" }
+    },
+    {
+      "name": "blocklisted mirror",
+      "url": "https://libgen.is/some-book",
+      "field": "news",
+      "expect": { "score": 0.0, "verdict": "BLOCKED", "tier": "block" }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "_readme": "Golden regression cases for --mode official-docs (product/framework documentation). Verifies recency decay, peer-review and engagement are all off, so the score is domain tier plus only the SEO-path/blocklist penalties. Run with `python3 scripts/check_policy.py`; re-baseline with `--bless` after a deliberate policy change.",
+  "cases": [
+    {
+      "name": "standards-body specification",
+      "url": "https://www.w3.org/TR/some-spec/",
+      "field": "ai",
+      "expect": { "score": 88.0, "verdict": "PRIMARY", "tier": "1" }
+    },
+    {
+      "name": "EU institutional documentation",
+      "url": "https://europa.eu/some-programme-docs",
+      "field": "ai",
+      "expect": { "score": 74.0, "verdict": "SUPPORT", "tier": "2" }
+    },
+    {
+      "name": "language reference docs",
+      "url": "https://docs.python.org/3/library/asyncio.html",
+      "field": "ai",
+      "expect": { "score": 60.0, "verdict": "SKIM", "tier": "3" }
+    },
+    {
+      "name": "engagement is ignored even for a heavily-starred repo",
+      "url": "https://github.com/torvalds/linux",
+      "field": "ai",
+      "inject": { "github": { "stars": 180000, "archived": false } },
+      "expect": { "score": 46.0, "verdict": "SKIM", "tier": "4" }
+    },
+    {
+      "name": "unregistered doc mirror falls to default tier",
+      "url": "https://some-unofficial-doc-mirror.example.org/api",
+      "field": "ai",
+      "expect": { "score": 32.0, "verdict": "WEAK", "tier": "5" }
+    },
+    {
+      "name": "tutorial content farm",
+      "url": "https://www.w3schools.com/python/python_intro.asp",
+      "field": "ai",
+      "expect": { "score": 14.0, "verdict": "DROP", "tier": "6" }
+    },
+    {
+      "name": "blocklisted mirror",
+      "url": "https://www.scribd.com/document/12345/leaked-docs",
+      "field": "ai",
+      "expect": { "score": 0.0, "verdict": "BLOCKED", "tier": "block" }
+    }
+  ]
+}

@@ -4,10 +4,9 @@ srcscore.py reads ONLY what this module hands back for scoring behaviour;
 nothing about scoring is hard-coded in srcscore_core/scoring.py. The base
 policy (scripts/policy.json) is the single source of truth for domain tiers
 and verdict bands. A `--mode` overlay (scripts/modes/*.json) may override
-weights/switches on top of it; `--change-half-life`, `--adjust`, `--enable`
-and `--disable` apply after that, and validation always runs last against
-the final merged result - there is no silent fallback anywhere in this
-chain, same as the original single-file scorer.
+weights/switches on top of it, and validation always runs last against the
+final merged result - there is no silent fallback anywhere in this chain,
+same as the original single-file scorer.
 """
 
 from __future__ import annotations
@@ -23,8 +22,6 @@ __all__ = [
     "PolicyError", "REQUIRED_KEYS", "POLICY_PATH", "MODES_DIR",
     "load_policy", "validate_policy", "tier_base", "verdict_for", "blocked_name",
     "deep_merge", "load_mode_overlay", "apply_mode", "signal_enabled",
-    "apply_half_life_changes", "apply_adjustments", "apply_switches",
-    "KNOWN_SWITCHES",
 ]
 
 
@@ -39,9 +36,6 @@ REQUIRED_KEYS = (
 )
 
 DEFAULT_SIGNALS = {"recency_decay": True, "peer_review": True, "engagement": True}
-KNOWN_SWITCHES = ("recency-decay", "peer-review", "engagement")
-_SWITCH_KEY = {"recency-decay": "recency_decay", "peer-review": "peer_review",
-               "engagement": "engagement"}
 
 
 # ----------------------------------------------------------------------------
@@ -176,98 +170,3 @@ def load_mode_overlay(mode: str, modes_dir: str = None) -> dict:
 def apply_mode(policy: dict, mode: str, modes_dir: str = None) -> dict:
     overlay = load_mode_overlay(mode, modes_dir)
     return deep_merge(policy, overlay)
-
-
-# ----------------------------------------------------------------------------
-# CLI-driven tuning
-# ----------------------------------------------------------------------------
-
-def apply_half_life_changes(policy: dict, pairs: list) -> dict:
-    """`pairs` is a flat list of "field:years" strings (already split from
-    argparse's nargs="+" groups). Field names match field_halflife_years
-    case-insensitively; an unknown field is a hard error."""
-    if not pairs:
-        return policy
-    hl = dict(policy["field_halflife_years"])
-    lookup = {k.lower(): k for k in hl}
-    for pair in pairs:
-        if ":" not in pair:
-            raise PolicyError("--change-half-life expects FIELD:YEARS, got %r" % pair)
-        field, years = pair.split(":", 1)
-        key = lookup.get(field.strip().lower())
-        if key is None:
-            raise PolicyError(
-                "--change-half-life: unknown field %r (known: %s)"
-                % (field, ", ".join(sorted(hl))))
-        try:
-            hl[key] = float(years)
-        except ValueError:
-            raise PolicyError("--change-half-life: %r is not a number" % years)
-    out = dict(policy)
-    out["field_halflife_years"] = hl
-    return out
-
-
-def _get_path(d: dict, parts: list):
-    cur = d
-    for p in parts:
-        if not isinstance(cur, dict) or p not in cur:
-            return None, False
-        cur = cur[p]
-    return cur, True
-
-
-def _set_path(d: dict, parts: list, value):
-    cur = d
-    for p in parts[:-1]:
-        cur[p] = dict(cur[p])
-        cur = cur[p]
-    cur[parts[-1]] = value
-
-
-def apply_adjustments(policy: dict, pairs: list) -> dict:
-    """`pairs` is a flat list of "dotted.path:delta" strings. The leaf at
-    `dotted.path` must already exist and be numeric; the delta is added to
-    it. This never introduces a new key - same "no guessed policy"
-    philosophy as validate_policy."""
-    if not pairs:
-        return policy
-    out = json.loads(json.dumps(policy))  # cheap deep copy, policy is JSON-shaped
-    for pair in pairs:
-        if ":" not in pair:
-            raise PolicyError("--adjust expects PATH:DELTA, got %r" % pair)
-        path, delta = pair.rsplit(":", 1)
-        parts = path.split(".")
-        cur, found = _get_path(out, parts)
-        if not found:
-            raise PolicyError("--adjust: no such policy path %r" % path)
-        if not isinstance(cur, (int, float)) or isinstance(cur, bool):
-            raise PolicyError("--adjust: %r is not a numeric policy value" % path)
-        try:
-            d = float(delta)
-        except ValueError:
-            raise PolicyError("--adjust: %r is not a number" % delta)
-        _set_path(out, parts, cur + d)
-    return out
-
-
-def apply_switches(policy: dict, enable: list, disable: list) -> dict:
-    """`enable`/`disable` are flat lists of switch names from KNOWN_SWITCHES.
-    disable is applied after enable when the same switch appears in both,
-    so a later --disable always wins over an earlier --enable."""
-    if not enable and not disable:
-        return policy
-    signals = dict(policy.get("signals", DEFAULT_SIGNALS))
-    for name in enable or []:
-        if name not in KNOWN_SWITCHES:
-            raise PolicyError(
-                "unknown switch %r (known: %s)" % (name, ", ".join(KNOWN_SWITCHES)))
-        signals[_SWITCH_KEY[name]] = True
-    for name in disable or []:
-        if name not in KNOWN_SWITCHES:
-            raise PolicyError(
-                "unknown switch %r (known: %s)" % (name, ", ".join(KNOWN_SWITCHES)))
-        signals[_SWITCH_KEY[name]] = False
-    out = dict(policy)
-    out["signals"] = signals
-    return out

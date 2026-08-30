@@ -1,0 +1,84 @@
+{
+  "_readme": "Golden regression cases for --mode community-opinion (Reddit/forum/X/HN discussion). Verifies peer-review is off, engagement is weighted highest, and the trusted_people bonus (modes/community_opinion.json) fires only for a matched x.com/twitter.com handle. Run with `python3 scripts/check_policy.py`; re-baseline with `--bless` after a deliberate policy change.",
+  "cases": [
+    {
+      "name": "hot preprint blows up in a discussion thread",
+      "url": "https://arxiv.org/abs/2501.55555",
+      "field": "opinion",
+      "inject": {
+        "scholar": {
+          "title": "A widely discussed preprint",
+          "citations": 5000,
+          "year": 2025,
+          "age_years": 1.0,
+          "peer_reviewed": false
+        }
+      },
+      "expect": {
+        "score": 91.0,
+        "verdict": "PRIMARY",
+        "tier": "3"
+      }
+    },
+    {
+      "name": "heavily upvoted HN thread on a mainstream story",
+      "url": "https://news.ycombinator.com/item?id=12345678",
+      "field": "opinion",
+      "inject": {
+        "hn": {
+          "points": 5000
+        }
+      },
+      "expect": {
+        "score": 64.0,
+        "verdict": "SUPPORT",
+        "tier": "4"
+      }
+    },
+    {
+      "name": "known reliable researcher's post amplified by HN discussion",
+      "url": "https://x.com/ylecun/status/998877",
+      "field": "opinion",
+      "inject": {
+        "hn": {
+          "points": 300
+        }
+      },
+      "expect": {
+        "score": 58.9,
+        "verdict": "SKIM",
+        "tier": "5"
+      }
+    },
+    {
+      "name": "known reliable researcher's raw post, no corroborating engagement",
+      "url": "https://x.com/karpathy/status/1234567890123456789",
+      "field": "opinion",
+      "expect": {
+        "score": 44.0,
+        "verdict": "WEAK",
+        "tier": "5"
+      }
+    },
+    {
+      "name": "listicle-style thread on an aggregator",
+      "url": "https://www.reddit.com/r/AI/best-ai-tools-in-2024-thread",
+      "field": "opinion",
+      "expect": {
+        "score": 26.0,
+        "verdict": "DROP",
+        "tier": "5"
+      }
+    },
+    {
+      "name": "blocklisted notes-sharing mirror",
+      "url": "https://coursehero.com/some-notes",
+      "field": "opinion",
+      "expect": {
+        "score": 0.0,
+        "verdict": "BLOCKED",
+        "tier": "block"
+      }
+    }
+  ]
+}

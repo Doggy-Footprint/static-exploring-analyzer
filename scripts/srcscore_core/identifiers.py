@@ -5,11 +5,11 @@ from __future__ import annotations
 import re
 import urllib.parse
 
-from .util import age_years
+from .util import age_years, host_path, norm_host
 
 __all__ = [
     "ARXIV_RE", "DOI_RE", "GITHUB_RE", "PUBMED_RE", "OPENREVIEW_RE", "BIORXIV_RE",
-    "GITHUB_NON_REPO", "extract_ids", "arxiv_id_age_years",
+    "GITHUB_NON_REPO", "extract_ids", "arxiv_id_age_years", "extract_person_handle",
 ]
 
 ARXIV_RE = re.compile(
@@ -73,3 +73,36 @@ def arxiv_id_age_years(arxiv_id: str):
         return None
     year = 1900 + yy if old and yy >= 91 else 2000 + yy
     return age_years("%04d-%02d-01" % (year, mm), None)
+
+
+_X_PROFILE_RE = re.compile(r"^/([A-Za-z0-9_]{1,15})(?:/|$)")
+_X_NON_PROFILE_PATHS = frozenset((
+    "i", "home", "search", "hashtag", "explore", "notifications",
+    "messages", "settings", "compose",
+))
+_REDDIT_USER_RE = re.compile(r"^/(?:u|user)/([A-Za-z0-9_\-]+)", re.I)
+_PERSON_HOSTS = frozenset(("x.com", "twitter.com", "reddit.com"))
+
+
+def extract_person_handle(url: str):
+    """Return (host, handle) for a known social-profile URL, else None.
+
+    Pattern-only, same as domain tiering - no network identity lookup. Only
+    covers platforms where the author's handle is actually present in the
+    URL path (x.com/twitter.com profile & status links, reddit.com/u/...
+    profile links); a reddit discussion-thread URL never carries the
+    author's name, so it can't be matched this way.
+    """
+    host = norm_host(url)
+    if host not in _PERSON_HOSTS:
+        return None
+    path = host_path(url)[len(host):]
+    if host in ("x.com", "twitter.com"):
+        m = _X_PROFILE_RE.match(path)
+        if m and m.group(1).lower() not in _X_NON_PROFILE_PATHS:
+            return host, m.group(1).lower()
+    elif host == "reddit.com":
+        m = _REDDIT_USER_RE.match(path)
+        if m:
+            return host, m.group(1).lower()
+    return None

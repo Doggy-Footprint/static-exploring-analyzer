@@ -8,10 +8,7 @@ import sys
 
 from .fetchers import CACHE_DIR, STATS, Cache
 from .io_format import parse_input, render_md, render_table
-from .policy import (
-    KNOWN_SWITCHES, PolicyError, apply_adjustments, apply_half_life_changes, apply_mode,
-    apply_switches, load_policy, validate_policy,
-)
+from .policy import PolicyError, apply_mode, load_policy, validate_policy
 from .scoring import score_many
 
 __all__ = ["main"]
@@ -19,10 +16,6 @@ __all__ = ["main"]
 VERSION = "2.0.0"
 
 MODES = ("academic", "non-academic", "community-opinion", "news", "official-docs")
-
-
-def _flatten(groups) -> list:
-    return [x for group in (groups or []) for x in group]
 
 
 def main(argv=None):
@@ -44,31 +37,12 @@ def main(argv=None):
                     help="scoring profile, loaded from scripts/modes/<mode>.json "
                          "and merged onto --policy (default: academic)")
     ap.add_argument("--modes-dir", default=None, help="override scripts/modes/ location")
-    ap.add_argument("--change-half-life", nargs="+", action="append", default=[],
-                    metavar="FIELD:YEARS",
-                    help="override a field's citation half-life, e.g. "
-                         "--change-half-life ai:2 bio:5 (repeatable)")
-    ap.add_argument("--adjust", nargs="+", action="append", default=[],
-                    metavar="POLICY.PATH:DELTA",
-                    help="add DELTA to an existing numeric policy value, e.g. "
-                         "--adjust peer_review.published_bonus:+3 (repeatable)")
-    ap.add_argument("--enable", nargs="+", action="append", default=[],
-                    metavar="SWITCH", choices=KNOWN_SWITCHES,
-                    help="turn a scoring component back on (e.g. after a mode disables it): "
-                         "%s (repeatable)" % ", ".join(KNOWN_SWITCHES))
-    ap.add_argument("--disable", nargs="+", action="append", default=[],
-                    metavar="SWITCH", choices=KNOWN_SWITCHES,
-                    help="turn off a scoring component: %s (repeatable)"
-                         % ", ".join(KNOWN_SWITCHES))
     ap.add_argument("--version", action="version", version=VERSION)
     a = ap.parse_args(argv)
 
     try:
         policy = load_policy(a.policy)
         policy = apply_mode(policy, a.mode, a.modes_dir)
-        policy = apply_half_life_changes(policy, _flatten(a.change_half_life))
-        policy = apply_adjustments(policy, _flatten(a.adjust))
-        policy = apply_switches(policy, _flatten(a.enable), _flatten(a.disable))
         validate_policy(policy, "merged policy (%s + --mode %s)" % (a.policy or "policy.json",
                                                                       a.mode))
     except PolicyError as e:

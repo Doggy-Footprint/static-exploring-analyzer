@@ -10,5 +10,25 @@
   "engagement": {
     "github": { "coefficient": 5.4, "cap": 24.0, "archived_penalty": -4.0 },
     "hackernews": { "coefficient": 6.0, "cap": 18.0, "min_tier": 1 }
+  },
+
+  "trusted_people": {
+    "_readme": "Flat bonus (added on top of tier + engagement) when the URL is a profile or post by a well-known domain expert with a track record of reliable public commentary. Matching is URL-pattern-only (see identifiers.extract_person_handle): x.com/twitter.com profile and status links, and reddit.com/u/<name> profile links - a reddit discussion-thread URL never carries the author's name in its path, so reddit is left empty rather than guessed. Handles are public figures' own accounts, not affiliation endorsements; re-verify periodically since handles can change hands or go inactive.",
+    "bonus": 12.0,
+    "hosts": {
+      "x.com": [
+        "karpathy", "ylecun", "goodfellow_ian", "jeffdean", "fchollet",
+        "andrewyng", "drfeifei", "demishassabis", "ilyasut",
+        "soumithchintala", "hardmaru", "rasbt", "simonw", "lexfridman",
+        "gdb", "sama"
+      ],
+      "twitter.com": [
+        "karpathy", "ylecun", "goodfellow_ian", "jeffdean", "fchollet",
+        "andrewyng", "drfeifei", "demishassabis", "ilyasut",
+        "soumithchintala", "hardmaru", "rasbt", "simonw", "lexfridman",
+        "gdb", "sama"
+      ],
+      "reddit.com": []
+    }
   }
 }

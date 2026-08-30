@@ -97,7 +97,7 @@ The tier (domain rating) sets the base score first; secondary indicators (citati
 |---|---|---|
 | `academic` (default) | `modes/academic.json` | Empty overlay — `policy.json` itself is the academic profile. |
 | `non-academic` | `modes/non_academic.json` | GitHub repos / engineering blogs / technical postings. Engagement (stars, HN) weighted higher; HN lookup no longer restricted to tier ≤3; default field `cs`. |
-| `community-opinion` | `modes/community_opinion.json` | Reddit/forum/X/HN discussion. Peer-review scoring off; engagement weighted highest; a short `opinion` half-life (0.75y) becomes the default field. |
+| `community-opinion` | `modes/community_opinion.json` | Reddit/forum/X/HN discussion. Peer-review scoring off; engagement weighted highest; a short `opinion` half-life (0.75y) becomes the default field; a post/profile link from a known reliable expert (`trusted_people` list in the mode file) gets a flat +12 bonus. |
 | `news` | `modes/news.json` | News coverage. Peer-review off; a fast `news` half-life (0.2y) with tight fresh-article windows becomes the dominant signal; engagement (HN discussion) stays on. |
 | `official-docs` | `modes/official_docs.json` | Product/framework docs (docs.python.org, docs.anthropic.com, ...). Recency decay, peer-review and engagement all off — docs are evergreen and credibility rests on domain tier alone. |
 

@@ -15,7 +15,7 @@ cd "$repo_root"
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
 case "$staged" in
   *scripts/policy.json*|*scripts/srcscore.py*|*scripts/srcscore_core/**|\
-  *scripts/check_policy.py*|*scripts/golden.json*|*scripts/modes/**) ;;
+  *scripts/check_policy.py*|*scripts/golden/**|*scripts/modes/**) ;;
   *) exit 0 ;;
 esac
 
@@ -29,8 +29,8 @@ python3 scripts/check_policy.py || {
 # --bless must have been run and staged: an unstaged re-baseline would leave
 # the committed fixtures out of date even though the check passed on the
 # worktree.
-if ! git diff --quiet -- scripts/golden.json; then
-  echo "pre-commit: scripts/golden.json has unstaged changes."
-  echo "  git add scripts/golden.json"
+if ! git diff --quiet -- scripts/golden/; then
+  echo "pre-commit: scripts/golden/ has unstaged changes."
+  echo "  git add scripts/golden/"
   exit 1
 fi
