@@ -1,0 +1,1 @@
+Check `scripts/policy.json` and `scripts/modes/` to edit this skill permanently.
