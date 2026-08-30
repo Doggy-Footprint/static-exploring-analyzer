@@ -1,0 +1,14 @@
+{
+  "_readme": "For Reddit/forum threads, X posts and HN discussion itself, where the point is reading the room, not citing a scholarly record. Peer-review scoring is switched off (these URLs are never preprint hosts, but the switch also stops a stray DOI/arXiv link on a discussion page from getting academic treatment). Engagement caps go up further than non_academic, and a short 'opinion' half-life is added and made the default field since discussions age fast.",
+
+  "signals": { "peer_review": false },
+
+  "defaults": { "field": "opinion" },
+
+  "field_halflife_years": { "opinion": 0.75 },
+
+  "engagement": {
+    "github": { "coefficient": 5.4, "cap": 24.0, "archived_penalty": -4.0 },
+    "hackernews": { "coefficient": 6.0, "cap": 18.0, "min_tier": 1 }
+  }
+}

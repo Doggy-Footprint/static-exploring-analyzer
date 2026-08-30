@@ -1,0 +1,10 @@
+{
+  "_readme": "For GitHub repos, engineering blog posts and technical postings rather than papers. Citations/peer-review stay on - a post can still link a paper - but engagement (stars, HN points) is weighted more heavily, and the Hacker News lookup is no longer restricted to tier <=3 sources. Default field switches to `cs`.",
+
+  "defaults": { "field": "cs" },
+
+  "engagement": {
+    "github": { "coefficient": 5.4, "cap": 24.0, "archived_penalty": -4.0 },
+    "hackernews": { "coefficient": 4.5, "cap": 14.0, "min_tier": 1 }
+  }
+}

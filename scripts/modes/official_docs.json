@@ -1,0 +1,5 @@
+{
+  "_readme": "For product/framework documentation (docs.python.org, docs.anthropic.com, MDN, ...). Docs are evergreen: a page isn't worse for being three years old if it still describes the current API, so recency decay is switched off entirely - the concrete case of 'use half-life or not' as a policy toggle. Peer-review and engagement don't apply to a docs page either (it has no venue and isn't measured by stars/HN points), so both are off too. Credibility here rests almost entirely on the domain tier.",
+
+  "signals": { "recency_decay": false, "peer_review": false, "engagement": false }
+}

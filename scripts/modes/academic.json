@@ -1,0 +1,3 @@
+{
+  "_readme": "Default mode. policy.json IS the academic profile, so this overlay is intentionally empty - it exists so `--mode academic` (the default) goes through the same load-overlay-merge-validate path as every other mode, instead of being a special case."
+}

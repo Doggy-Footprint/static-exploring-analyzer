@@ -1,5 +1,5 @@
 {
-  "_readme": "Single source of truth for scored-web-search. srcscore.py reads ONLY this file for scoring behaviour; nothing is hard-coded in the script. references/scoring.md is generated from this file and checked by scripts/check_policy.py (run automatically by the pre-commit hook).",
+  "_readme": "Single source of truth for scored-web-search.",
   "version": "2.0.0",
 
   "defaults": {

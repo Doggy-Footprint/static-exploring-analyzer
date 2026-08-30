@@ -26,57 +26,31 @@ class CheckSchemaTests(unittest.TestCase):
         self.assertTrue(problems)
 
 
-class CheckDocsTests(unittest.TestCase):
+class CheckModesTests(unittest.TestCase):
     def setUp(self):
         self.policy = S.load_policy()
-        self.golden = load_golden()
 
-    def test_real_docs_are_in_sync(self):
-        problems = CP.check_docs(self.policy, self.golden, CP.DOC_PATH, fix=False)
+    def test_real_mode_overlays_merge_and_validate(self):
+        problems = CP.check_modes(self.policy, CP.MODES_DIR)
         self.assertEqual(problems, [])
 
-    def test_stale_block_is_detected_without_fix(self):
-        with open(CP.DOC_PATH, "r", encoding="utf-8") as f:
-            real_text = f.read()
-        stale = real_text.replace(
-            "<!-- policy:tiers -->\n| Tier | Base | Definition |",
-            "<!-- policy:tiers -->\nSTALE CONTENT", 1)
-        with tempfile.TemporaryDirectory() as d:
-            path = os.path.join(d, "scoring.md")
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(stale)
-            problems = CP.check_docs(self.policy, self.golden, path, fix=False)
-            self.assertTrue(any("tiers" in p for p in problems))
-            # file must be untouched when fix is False
-            with open(path, "r", encoding="utf-8") as f:
-                self.assertEqual(f.read(), stale)
+    def test_missing_modes_dir_reports_problem(self):
+        problems = CP.check_modes(self.policy, "/nonexistent/modes")
+        self.assertTrue(problems)
 
-    def test_fix_rewrites_stale_block_to_match_policy(self):
-        with open(CP.DOC_PATH, "r", encoding="utf-8") as f:
-            real_text = f.read()
-        stale = real_text.replace(
-            "<!-- policy:tiers -->\n| Tier | Base | Definition |",
-            "<!-- policy:tiers -->\nSTALE CONTENT", 1)
+    def test_overlay_that_breaks_validation_is_reported(self):
         with tempfile.TemporaryDirectory() as d:
-            path = os.path.join(d, "scoring.md")
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(stale)
-            problems = CP.check_docs(self.policy, self.golden, path, fix=True)
-            self.assertEqual(problems, [])
-            # a second, non-fix pass over the now-fixed file must be clean
-            problems2 = CP.check_docs(self.policy, self.golden, path, fix=False)
-            self.assertEqual(problems2, [])
+            with open(os.path.join(d, "broken.json"), "w", encoding="utf-8") as f:
+                json.dump({"defaults": {"field": "not-a-real-field"}}, f)
+            problems = CP.check_modes(self.policy, d)
+            self.assertTrue(any("field_halflife_years" in p for p in problems))
 
-    def test_missing_marker_is_reported(self):
-        with open(CP.DOC_PATH, "r", encoding="utf-8") as f:
-            real_text = f.read()
-        broken = real_text.replace("<!-- policy:tiers -->", "", 1)
-        with tempfile.TemporaryDirectory() as d:
-            path = os.path.join(d, "scoring.md")
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(broken)
-            problems = CP.check_docs(self.policy, self.golden, path, fix=False)
-            self.assertTrue(any("expected exactly one" in p for p in problems))
+    def test_overlay_deep_merges_without_dropping_untouched_keys(self):
+        merged = S.apply_mode(self.policy, "non-academic", CP.MODES_DIR)
+        self.assertEqual(merged["defaults"]["field"], "cs")
+        # untouched top-level keys must survive the merge unchanged
+        self.assertEqual(merged["domains"], self.policy["domains"])
+        self.assertEqual(merged["tiers"], self.policy["tiers"])
 
 
 class CheckGoldenTests(unittest.TestCase):

@@ -1,6 +1,6 @@
 ---
 name: scored-web-search
-description: Filter and rank web sources by credibility before main agent reads them, using deterministic score (domain tier, citation counts, engagement, etc). LLM judgement is not included. Use this for only high quality research, academic fact-gathering requests in which sub-standard sources can compromise quality of answer. Or use it when explicitly request for this skill. If you are not sure about necesity of this skill, ask user.
+description: Filter and rank web sources by credibility before main agent reads them, using deterministic score (domain tier, citations, engagement, etc). LLM judgement is not included. Use this for high quality web search, academic requests, or cases when sub-standard sources can compromise quality of the answer. Or use it when explicitly requested for this skill. If you are not sure about necesity of this skill, ask user.
 ---
 
 # Scored Web Search
@@ -75,20 +75,31 @@ Close the report with one line: `62 sources collected → 11 passed → 9 read (
 
 ## Scoring Policy
 
-The tier (domain rating) sets the base score first; then secondary indicator (evidence signals) adjust it up or down. Detailed policy can be found in `references/scoring.md`.
+The tier (domain rating) sets the base score first; secondary indicators (citations, community-engagement, etc) adjust it up or down.
 
-- Base score
-  - T1: academic journals/official statistics
-  - T2: reputable journals/institutions
-  - T3: preprints/major research-lab blogs
-  - T4: trade media
-  - T5: general media/community
-  - T6: SEO content farms
-  - Unresitered domains default to T5
-- Citations: estimated from cumulative citations and citations velocity.
-- Timelines: exponential decay based on the field's half-life. For example, AI research has shorter half-life than medical research.
-- Peer review 
-- Restraction
+### First pass: domain tier (base score)
+
+| Tier | Base | Definition |
+|---|---|---|
+| 1 | 88 | Academic journals, official statistics, standards bodies |
+| 2 | 74 | Reputable journals, major institutions and universities |
+| 3 | 60 | Preprints, major research-lab and vendor engineering blogs |
+| 4 | 46 | Trade media, well-known individual technical blogs |
+| 5 | 32 | General media, community sites, aggregators (default for unregistered domains) |
+| 6 | 14 | SEO content farms, unsourced listicles, market-research spam |
+| block | 0 | Scrapers, mirrors, plagiarism hosts. Always BLOCKED |
+
+## Modes
+
+`--mode` can be used for goal of web search
+
+| Mode | File | What changes |
+|---|---|---|
+| `academic` (default) | `modes/academic.json` | Empty overlay — `policy.json` itself is the academic profile. |
+| `non-academic` | `modes/non_academic.json` | GitHub repos / engineering blogs / technical postings. Engagement (stars, HN) weighted higher; HN lookup no longer restricted to tier ≤3; default field `cs`. |
+| `community-opinion` | `modes/community_opinion.json` | Reddit/forum/X/HN discussion. Peer-review scoring off; engagement weighted highest; a short `opinion` half-life (0.75y) becomes the default field. |
+| `news` | `modes/news.json` | News coverage. Peer-review off; a fast `news` half-life (0.2y) with tight fresh-article windows becomes the dominant signal; engagement (HN discussion) stays on. |
+| `official-docs` | `modes/official_docs.json` | Product/framework docs (docs.python.org, docs.anthropic.com, ...). Recency decay, peer-review and engagement all off — docs are evergreen and credibility rests on domain tier alone. |
 
 ## Error handling
 If script fails, report it and stop; do not fall back to unscored reading.

@@ -1,0 +1,23 @@
+{
+  "_readme": "For news coverage rather than papers. There is no established citation/peer-review signal for news, so that scoring is switched off. Recency becomes the dominant signal instead: a fast 'news' half-life is added and made the default field, the decay grace period shrinks from 2 years to 3 days, and the fresh-article bonus windows are tightened to reward same-day/same-week coverage over the old 1yr/2yr windows. Engagement (HN discussion of the article) stays on - it's a real signal for whether a piece of news actually mattered.",
+
+  "signals": { "peer_review": false },
+
+  "defaults": { "field": "news" },
+
+  "field_halflife_years": { "news": 0.2 },
+
+  "recency": {
+    "fresh_bonuses": [
+      { "max_age_years": 0.02, "points": 4.0 },
+      { "max_age_years": 0.14, "points": 2.0 }
+    ],
+    "decay": { "grace_years": 0.01, "max_penalty": -12.0 },
+    "classic_exemption_citations": 1000,
+    "classic_softening": { "citations": 300, "factor": 0.4 }
+  },
+
+  "engagement": {
+    "hackernews": { "coefficient": 4.5, "cap": 14.0, "min_tier": 1 }
+  }
+}
