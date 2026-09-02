@@ -1,6 +1,6 @@
 ---
 name: scored-web-search
-description: Filter and rank web sources by credibility before main agent reads them, using deterministic score (domain tier, citations, engagement, etc). LLM judgement is not included. Use this for high quality web search, academic requests, or cases when sub-standard sources can compromise quality of the answer. Or use it when explicitly requested for this skill. If you are not sure about necesity of this skill, ask user.
+description: Filter and rank web sources with deterministic, non-LLM scoring before the main agent reads them. Use only when the user explicitly requests scored source filtering or when source quality is central to a substantial academic, technical, community-opinion, news, or official-document research task; select the matching mode. Do not use for routine lookups, navigation, or searches whose sources are already specified. If applicability is unclear, ask the user.
 ---
 
 # Scored Web Search
