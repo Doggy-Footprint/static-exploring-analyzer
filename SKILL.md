@@ -1,6 +1,6 @@
 ---
 name: scored-web-search
-description: Filter and rank web sources with deterministic, non-LLM scoring before the main agent reads them. Use only when the user explicitly requests scored source filtering or when source quality is central to a substantial academic, technical, community-opinion, news, or official-document research task; select the matching mode. Do not use for routine lookups, navigation, or searches whose sources are already specified. If applicability is unclear, ask the user.
+description: Filter and rank web sources with heuristic scoring system before the main agent reads them. By using only select sources, this skill reduces context rot, improves the quality of research reports, and also reduces token usage. This skill provides academic, non-academic, community-opinion, news, and official-document modes. Triggering expressions are "scored web search", "search", "research", "investigate", "find", "look up", "back it up", "evidence", "fact check", and similar. This skill intentionally drops some of web-search results - if you need those for example, searching for more possible options, please use regular web search instead.
 ---
 
 # Scored Web Search
@@ -18,11 +18,15 @@ This skill filters sub-standard sources before the main agent reads them when hi
 6. Write    → every claim tagged with source + score
 ```
 
+When sub-agents are not available, the main agent does Steps 1 and 5 as fallback.
+
 ### Step 1 — Search: collect URLs only
 
 The main agent defines the search keywords. Delegate the actual web search to a **lightweight subagent** (do NOT use `fork` / make subagent to call web-search tools at a single turn. / use gpt-5.6-luna or haiku-4.5) and accept only a `URL | title` list in return. NO summaries, NO snippets, DO NOT open page — the point of this step is to keep low-quality text out of the main context.
 
 Max 2 sub-topics per subagent. For 3 or more sub-topics, run subagents in parallel. Collect 40-60 URLs total.
+
+No sub agent fallback: main agent calls the web-search tool itself. Extract only the URLs from the results and write them straight to `urls.txt`. The caution for sub agents works same for main agent too.
 
 ### Step 2 — Score: hand it to the script
 
@@ -66,6 +70,8 @@ Only when the user has stressed accuracy, or the report carries a lot of figures
 > For each figure or claim: (a) does this document actually state that figure, (b) is this document the original source of the figure or is it citing someone else, (c) are sample size, time period, and measurement method stated. Answer only in the format `claim | supported/secondary/contradicted | location of evidence`.
 
 When a figure turns out to be secondary, the document you read is not its source. Take the URL of the original it cites — a new source, not yet scored — and run that through step 2; if it passes, read it and attribute the figure to it. If the original is paywalled, dead, or fails step 2, keep the figure attributed to the document you read and mark it as a re-report — never present a re-report as a primary source.
+
+No sub agent fallback: run the same claim-vs-evidence check yourself instead of delegating it. This step doesn't reintroduce the context-pollution problem Step 1 guards against — the sources are already open and being read — so there's no quality loss from doing it inline.
 
 ### Step 6 — Write
 

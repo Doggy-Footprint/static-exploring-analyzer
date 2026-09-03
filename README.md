@@ -33,7 +33,7 @@ AI chat에서 web search를 할 때, 결과물을 heuristic한 filter로 걸러�
 
 ## 어떻게 작동하나?
 
-1. web search는 sub agent에게 맡겨 **토큰 소모**를 줄이고, **context rot**을 방지한다.
+1. web search는 sub agent에게 맡겨 **토큰 소모**를 줄이고, **context rot**을 방지한다. (Task/Agent 도구가 없는 환경, 예: Codex는 main agent가 직접 검색하되 snippet은 읽지 않고 URL만 추출하는 fallback으로 동작한다)
 2. 출처, 인용수, 저널, 좋아요 수, 별 수 등을 바탕으로 heuristic하게 점수를 매긴다. - 자세한 내용은 `SKILL.md`, `policy` 참고.
 3. main agent(고비용, 고성능)은 선별된 소스를 읽고 리포트를 작성한다.
 
